@@ -6,12 +6,14 @@ close all;
 % Add directories
 
 addpath(genpath('/Users/admin/Documents/MATLAB/'));
-cd('/Users/admin/Documents/MATLAB/BackwardsLetters/Study_2/Exp1_Random_0and180degs/Data');
+addpath(genpath('~/Google Drive/Backwards paper/secondPaper/E2/ModelingCode'));
+cd('~/Google Drive/Backwards paper/secondPaper/E2/Data');
+
 
 % Task parameters
 
-letterArray = [char(65:66) char(68:85) char(87:90)];      % A to Z
-nLeadTrailItems = 6;            % Nuumber of items in stream at beginning and end with no target
+letterArray = [char(65:71) char(74:76) char(81:82) char(84:86) char(89)];      % A to Z
+nLeadTrailItems = 4;            % Nuumber of items in stream at beginning and end with no target
 nConditions = 2;
 nStreams = 2;
 nTrials = 100;                   % Per participant, per condition, per session
@@ -23,14 +25,14 @@ itemRate = 8;
 % Participant details
 
 %allParticipants =  {'AD', 'AE', 'AF', 'AG', 'AH', 'AI', 'AO', 'AP', 'AQ', 'AR', 'AU', 'AW', 'AX', 'BC', 'BD'};
-allParticipants = {'AA', 'AB', 'AC', 'AD', 'AE', 'AF', 'AG', 'AH', 'AI', 'AJ', 'AK', 'AL', 'AM', 'AN', 'AO', 'AP', 'AQ', 'AR', 'AS', 'AT', 'AU', 'AV', 'AW', 'AX', 'AY', 'AZ', 'BA', 'BB', 'BC', 'BD', 'BE', 'BF', 'BG', 'BH', 'BI', 'BJ', 'BK', 'BL', 'BM' ,'BN' ,'BO' ,'BP' ,'BQ' ,'BR', 'BS'};
+allParticipants = {'CB','CL','PP'};
 
 % Model fitting parameters
 
 nFreeParameters = 3;
 pdf_normmixture = @pdf_Mixture_Exp1;
 pdf_uniformonly = @pdf_Uniform_Exp1;
-nReplicates = 100;
+nReplicates = 300;
 pCrit = .05;
 smallNonZeroNumber = 10^-10;
 fitMaxIter = 10^4;
@@ -212,7 +214,7 @@ for thisCondition = 1:nConditions
             [h,pValue,stat,cValue] = lratiotest(-minNegLogLikelihood,-uniformNegLogLikelihood,nFreeParameters,pCrit);
         
             if h==0
-            
+                fprintf('Null model not rejected for participant %d, condition %d, stream %d', thisParticipant, thisCondition, thisStream)
                 % Null model not rejected; use uniform only
 
                 allEstimates_byParticipant(thisCondition,thisStream,thisParticipant,:) = [0 NaN NaN];
@@ -236,8 +238,8 @@ for thisCondition = 1:nConditions
 end
 
 
-cd('/Users/admin/Documents/MATLAB/BackwardsLetters/Study_2/Exp1_Random_0and180degs/Data');
-save('Exp1_Random_0and180degs_ModelRotated.mat','allEstimates_byParticipant','allLowerBounds_byParticipant','allUpperBounds_byParticipant', 'compiledErrors', 'positionError');
+
+save('Exp2_Random_0and180degs_withinStreams_ModelRotated.mat','allEstimates_byParticipant','allLowerBounds_byParticipant','allUpperBounds_byParticipant', 'compiledErrors', 'positionError');
 
 fprintf('\n\n 0 degrees (efficacy)');
 squeeze(allEstimates_byParticipant(1,:,:,1))'
