@@ -38,7 +38,7 @@ df <- df %>% mutate( orientation =ifelse(orientation==1, "Canonical","Inverted")
 
 
 Fit mixture model with R (if fitting not previously done and cached). 
-```{r, echo=FALSE, message=FALSE, cache=TRUE}
+```{r, echo=FALSE, cache=TRUE}
 #Setting cache = TRUE in hopes won't have to recalculate estimates "if cached results exist and this code chunk has not been changed since last run" 
 library(mixRSVP)
 
@@ -48,47 +48,25 @@ if (!exists("estimates")) {
   calculate<-TRUE 
 }
   
-condtnVariableNames <- c("subject","stream", "orientation") # 
+condtnVariableNames <- c("subject","stream", "orientation")  
 
 if (calculate) {
   estimates<- df %>%   filter(subject=="AA") %>%
     group_by_(.dots = condtnVariableNames) %>%  #.dots needed when you have a variable containing multiple factor names
-    do(  analyzeOneCondition(.,numItemsInStream,parameterBounds(),nReplicates=5) )
+    do(  analyzeOneConditionDF(.,numItemsInStream,parameterBounds(),nReplicates=5) )
   estimates<- estimates %>% rename(efficacy = p1, latency = p2, precision = p3)
   
 }
-#head(estimates)
+head(estimates)
 ```
 
-Unfortunately the differences between MATLAB and R are not trivial. Not substantial either! but we'd prefer trivial.
+Save the param estimates to a file
+```{Save param estimates, echo=FALSE}
 
-```{r, echo=FALSE, message=FALSE}
-#Compare MATLAB parameter estimates to R
-estimates_MATLAB<- estimates_MATLAB %>% rename(efficacy_M = efficacy, latency_M = latency, precision_M = precision, val_M = val)
-merged<- merge(estimates,estimates_MATLAB)  
-merged<- merged %>% mutate( effDiff = efficacy-efficacy_M, latDiff= latency_M-latency, preDiff= precision_M-precision, negLogL_Diff = val - val_M ) 
 
-#show differences columns only
-diffs<- select(merged, ends_with("Diff"))
+write.csv(estimates, file = "Data/backwards2E1_paramEstimates")
+
 ```
-
-The mean discrepancy (mean of the absolute value of the difference of the parameter estimates) for
-efficacy (effDiff), latency (latDiff), and precision (preDiff) is
-```{r, echo=FALSE, message=FALSE}
-#calc discrepancies
-#Don't include negLogL because absolute value not interpretable
-meanDiscrepancy<- diffs %>% select(-negLogL_Diff) 
-meanDiscrepancy<- summarise_all(abs(meanDiscrepancy),mean)
-round(meanDiscrepancy,3)
-```
-
-Now we report the bias difference:  the mean difference without taking the absolute value. Note that the negLogLikelihood for the MATLAB estimates is calculated by R, because Pat's code doesn't save the negative log likelihoods. Also in R we now use integration of the whole area under the bin, whereas Pat used the height of the density function in the center of the bin.
-```{r, echo=FALSE, message=FALSE}
-biasDiff<- summarise_all(diffs,mean)
-round(biasDiff,3)
-```
-Negative numbers above mean that MATLAB gives slightly higher efficacy and trivially higher precision.
-For likelihood, lower neg log likelihood is better, so the negative number means R did better.
 
 Let's inspect histogram plots and fits. Note that in every case, the negative log likelihood is better (smaller) for R, showing that the R code provides a better fit than the MATLAB code.
 
