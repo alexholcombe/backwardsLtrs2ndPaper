@@ -19,8 +19,8 @@ require(R.matlab)
 GoogleDrivePath<-"." # "Google\ Drive/Backwards\ paper"
 
 #First experiment of second backwards-letters paper. random orientation each trial.
-rawDataPath<- file.path("~",GoogleDrivePath,
-                            "E1/Data/RawData/Data")
+rawDataPath<- file.path(GoogleDrivePath,
+                            "Data/RawData/Data")
 #raw data path containing .mat file for each subject
 rawDataExcludedByMATLABpath<- file.path(rawDataPath, "Excluded")
 
@@ -35,7 +35,7 @@ readInAllFiles<- function(rawDataPath) {
     rawDataLoad=tryCatch(
       readMat(fileThis),
       error=function(e) {
-        stop( paste0("ERROR reading the file ",fname," :",e) )
+        stop( paste0("ERROR reading the file ",fileThis," :",e) )
       } )
     apparentSubjectName <- strsplit(files[i],split="_")[[1]][1]
     subjectName<- rawDataLoad$participantID[[1]]
@@ -79,6 +79,7 @@ excluded<- readInAllFiles(excludedSsPath)
 excluded$SPE<- excluded$respSP - excluded$targetSP
 ```
 
+Sanity visual check that see histogram.
 ```{r sanity visual check}
 
 sanityVisualCheck<-TRUE
@@ -87,14 +88,17 @@ if (sanityVisualCheck) {
   g=ggplot(excluded, aes(x=SPE))
   #plot data
   g<-g+geom_histogram(binwidth=1)
-  g
+  show(g)
+  
+  h<-ggplot(E,aes(x=SPE)) + geom_histogram(binwidth=1)
+  show(h)
 }
 
 ```
 
-#Meaning of condition variable
-#1 - upright
-#2 - inverted
+Meaning of condition variable
+* 1 - upright
+* 2 - inverted
 
 Combine excluded and non-excluded (based on old MATLAB anaylsis) participants
 ```{r combine}
@@ -105,8 +109,8 @@ excluded$excluded<-TRUE
 backwards2_E1<-rbind(E,excluded)
 
 #save dataframe into proper library data directory
-save(backwards2_E1, file = "data/backwards2_E1.rda", compress="bzip2")
-
+#save(backwards2_E1, file = "data/backwards2E1_rawDataFromMAT.rda", compress="bzip2")
+saveRDS(backwards2_E1, file = "Data/backwards2E1_rawDataFromMAT.rda", compress="bzip2")
 ```
 
 

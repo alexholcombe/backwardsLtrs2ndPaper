@@ -1,0 +1,183 @@
+---
+title: "mixModelE1data"
+author: "Alex Holcombe"
+date: '`r format(Sys.Date(), "%B %d, %Y")`'
+output: html_document
+---
+
+```{r setup, include=FALSE, message=FALSE}
+knitr::opts_chunk$set(echo = TRUE,  comment = NA)
+# http://htmlpreview.github.io/?https://github.com/alexholcombe/MixtureModelRSVP/blob/master/compareMATLABtoR.html
+```
+
+Load data
+
+```{r load data, echo=FALSE, message=FALSE}
+
+#Import raw data
+dataPath<- file.path("Data/")
+#Experiment was administered by MATLAB
+#.mat file been preprocessed into melted long dataframe by importE1data.Rmd
+data<- readRDS( file.path(dataPath, "backwards2E1_rawDataFromMAT.rda") ) 
+
+#tidy data
+library(dplyr)
+df<- data
+#to work with dplyr, can't have array field like letterSeq
+df$letterSeq<- NULL
+
+numItemsInStream<- length( data$letterSeq[1,] )  
+minSPE<- -17; maxSPE<- 17
+
+df<-df %>% rename(stream = target, orientation = condition )
+df <- df %>% mutate( stream =ifelse(stream==1, "Left","Right") )
+#mutate condition to Orientation
+df <- df %>% mutate( orientation =ifelse(orientation==1, "Canonical","Inverted") )
+
+```
+
+
+Fit mixture model with R (if fitting not previously done and cached). 
+```{r, echo=FALSE, message=FALSE, cache=TRUE}
+#Setting cache = TRUE in hopes won't have to recalculate estimates "if cached results exist and this code chunk has not been changed since last run" 
+library(mixRSVP)
+
+#Check whether already have parameter estimates or instead need to do it
+calculate<-FALSE
+if (!exists("estimates")) { 
+  calculate<-TRUE 
+}
+  
+condtnVariableNames <- c("subject","stream", "orientation") # 
+
+if (calculate) {
+  estimates<- df %>%   filter(subject=="AA") %>%
+    group_by_(.dots = condtnVariableNames) %>%  #.dots needed when you have a variable containing multiple factor names
+    do(  analyzeOneCondition(.,numItemsInStream,parameterBounds(),nReplicates=5) )
+  estimates<- estimates %>% rename(efficacy = p1, latency = p2, precision = p3)
+  
+}
+#head(estimates)
+```
+
+Unfortunately the differences between MATLAB and R are not trivial. Not substantial either! but we'd prefer trivial.
+
+```{r, echo=FALSE, message=FALSE}
+#Compare MATLAB parameter estimates to R
+estimates_MATLAB<- estimates_MATLAB %>% rename(efficacy_M = efficacy, latency_M = latency, precision_M = precision, val_M = val)
+merged<- merge(estimates,estimates_MATLAB)  
+merged<- merged %>% mutate( effDiff = efficacy-efficacy_M, latDiff= latency_M-latency, preDiff= precision_M-precision, negLogL_Diff = val - val_M ) 
+
+#show differences columns only
+diffs<- select(merged, ends_with("Diff"))
+```
+
+The mean discrepancy (mean of the absolute value of the difference of the parameter estimates) for
+efficacy (effDiff), latency (latDiff), and precision (preDiff) is
+```{r, echo=FALSE, message=FALSE}
+#calc discrepancies
+#Don't include negLogL because absolute value not interpretable
+meanDiscrepancy<- diffs %>% select(-negLogL_Diff) 
+meanDiscrepancy<- summarise_all(abs(meanDiscrepancy),mean)
+round(meanDiscrepancy,3)
+```
+
+Now we report the bias difference:  the mean difference without taking the absolute value. Note that the negLogLikelihood for the MATLAB estimates is calculated by R, because Pat's code doesn't save the negative log likelihoods. Also in R we now use integration of the whole area under the bin, whereas Pat used the height of the density function in the center of the bin.
+```{r, echo=FALSE, message=FALSE}
+biasDiff<- summarise_all(diffs,mean)
+round(biasDiff,3)
+```
+Negative numbers above mean that MATLAB gives slightly higher efficacy and trivially higher precision.
+For likelihood, lower neg log likelihood is better, so the negative number means R did better.
+
+Let's inspect histogram plots and fits. Note that in every case, the negative log likelihood is better (smaller) for R, showing that the R code provides a better fit than the MATLAB code.
+
+* yellow = guessing component 
+* light blue = Gaussian component
+* green = sum of the guessing and Gaussian components. In other words, the histogram heights predicted by the model
+* dark blue = continuous Gaussian. This helps get a sense of the effect of discretising the Gaussian. For instance, it's possible (especially using Pat's method, it seems), for the Gaussian peak to fly high above the bars and still fit the discrete bins (or bin centers, in Pat's method), suggesting an undesirably high estimates of the efficacy (likely accompanied by an undesirably low precision)
+
+```{r, echo=FALSE, message=FALSE, fig.height=360, fig.width=10}
+#want fig.height of 10 per subject
+
+source( file.path(mixModelingPath,"calcCurvesDataframes.R") )
+
+#create R curves
+df<- df # %>%  dplyr::filter(subject <="BB") #dplyr::filter(subject <= "BD" & subject >="AP")
+#dplyr::filter(subject=="AA",orientation=="Canonical")
+source( file.path(mixModelingPath,"histogramPlotting.R") ) #for calcFitDataframes
+source( file.path(mixModelingPath,"theme_apa.R") ) #for calcFitDataframes
+
+#Add R parameter estimates to dataframe
+df<- merge(df,estimates) 
+
+curvesR<- df %>% group_by_at(.vars = condtnVariableNames) %>% 
+  do(calcCurvesDataframes(.,minSPE,maxSPE,numItemsInStream))
+
+#Calc numObservations to each condition. This is needed only for scaling the fine-grained Gaussian
+#Calc the number of observations for each condition, because gaussianScaledforData needs to know.
+dfGroups<- df %>% group_by_at(.vars = condtnVariableNames) %>% summarise(nPerCond = n())
+#add nPerCond back to parameter estimates
+estimates<- merge(estimates,dfGroups)
+grain<-.05
+gaussianFineR<- estimates %>% group_by_at(.vars = condtnVariableNames) %>% do(
+  gaussianScaledFromDataframe(.,minSPE,maxSPE,grain) )
+
+
+#create MATLAB curves
+#need to rename parameters so that calcCurvesDataframes can find them
+estimates_M<- estimates_MATLAB %>% rename(efficacy=efficacy_M,latency=latency_M,precision=precision_M)
+#create temporary dataframe with data plus MATLAB estimates to generate curves
+dataStrippedOfEstimates<- select(df,-efficacy,-latency,-precision, -val)
+dM<-merge( dataStrippedOfEstimates, estimates_M )
+dM<- dM %>% rename( val = val_M ) #has to be called val so calcFitDataframes uses it rather than using R to calculate its own
+curvesMATLAB<- dM %>% group_by_at(.vars = condtnVariableNames) %>% 
+            do(calcCurvesDataframes(.,minSPE,maxSPE,numItemsInStream))
+
+#Calculate fine-grained Gaussian for MATLAB
+#Calc the number of observations for each condition, because gaussianScaledforData needs to know.
+dNum<- dataStrippedOfEstimates %>% group_by_at(.vars = condtnVariableNames) %>% summarise(nPerCond = n())
+#add nPerCond to MATLAB estimates, which will then be merged with raw data
+estimates_M<- merge(estimates_M,dNum)
+#merge MATLAB estimates with raw data
+dM<-merge( dataStrippedOfEstimates, estimates_M )
+gaussianFineM<- estimates_M %>% group_by_at(.vars = condtnVariableNames) %>% do(
+  gaussianScaledFromDataframe(.,minSPE,maxSPE,grain) )
+
+#Concatenate R and MATLAB into single dataframe
+curvesR$lang<-"R"; curvesMATLAB$lang<-"MATLAB"
+curves_R_MATLAB <- rbind( data.frame(curvesR), data.frame(curvesMATLAB) )
+#To facilitate plotting,
+#make dataframe containing the raw data twice, one for R plots column, one for MATLAB plots column (data identical)
+dfBoth<-rbind(   df %>% mutate(lang="R"), df %>% mutate(lang="MATLAB")  )
+
+#Concatenate fine-grained gaussian for R and MATLAB into single dataframe, so can plot both with ggplot
+gaussianFineR$lang<-"R"; gaussianFineM$lang<-"MATLAB"; 
+#Get the col names to match by only using a few columns
+gaussianFineR<- gaussianFineR %>% select(-val,-warnings)
+gaussianFineM<- gaussianFineM %>% select(-val_M)
+gaussFine_R_M <- rbind( data.frame(gaussianFineR), data.frame(gaussianFineM) )
+
+#PLOT EVERYTHING
+g=ggplot(dfBoth, aes(x=SPE)) + facet_grid(subject+stream+orientation~lang,  scales="free_y")
+g<-g+geom_histogram(binwidth=1,color="grey90") + xlim(minSPE,maxSPE)
+g<-g +theme_apa() #+theme(panel.grid.minor=element_blank(),panel.grid.major=element_blank())# hide all gridlines.
+#g<-g+ theme(line=element_blank(), panel.border = element_blank())
+sz=.8
+#Plot the underlying Gaussian , not just the discretized Gaussian
+g<-g + geom_line(data=gaussFine_R_M,aes(x=x,y=gaussianFreq),color="darkblue",size=1.2)
+
+g<-g+ geom_point(data=curves_R_MATLAB,aes(x=x,y=combinedFitFreq),color="chartreuse3",size=sz*2.5)
+g<-g+ geom_line(data=curves_R_MATLAB,aes(x=x,y=guessingFreq),color="yellow",size=sz)
+#Discretized Gaussian
+g<-g+ geom_line(data=curves_R_MATLAB,aes(x=x,y=gaussianFreq),color="lightblue",size=sz)
+
+numGroups<- length(table(dfBoth$orientation,dfBoth$subject,dfBoth$stream))
+fontSz = 400/numGroups
+g<-g + geom_text(data=curves_R_MATLAB,aes(x=-9,y=32, label = paste("-logLik==", round(val,1), sep = "")),  parse = TRUE,size=fontSz) +
+  geom_text(data=curves_R_MATLAB,aes(x=-7,y=28, label = paste("plain(e)==", round(efficacy,2), sep = "")),  parse = TRUE,size=fontSz) +
+  geom_text(data=curves_R_MATLAB,aes(x=-7,y=25, label = paste("mu==", round(latency,2), sep = "")),  parse = TRUE,size=fontSz)+
+  geom_text(data=curves_R_MATLAB,aes(x=-7,y=22, label = paste("sigma==", round(precision,2), sep = "")),  parse = TRUE,size=fontSz)
+show(g)
+```
+
