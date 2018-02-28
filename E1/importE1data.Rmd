@@ -108,9 +108,24 @@ excluded$excluded<-TRUE
 
 backwards2_E1<-rbind(E,excluded)
 
+```
+
+Make condition names more sensible - stream (Left/Right) and orientation (Canonical/Inverted)
+```{r}
+names(backwards2_E1)[names(backwards2_E1) == 'target'] <-'stream'
+names(backwards2_E1)[names(backwards2_E1) == 'condition'] <-'orientation'
+backwards2_E1$stream[ backwards2_E1$stream==1 ] <- "Left"
+backwards2_E1$stream[ backwards2_E1$stream==2 ] <- "Right"
+#mutate condition to Orientation
+backwards2_E1$orientation[ backwards2_E1$orientation==1 ] <- "Canonical"
+backwards2_E1$orientation[ backwards2_E1$orientation==2 ] <- "Inverted"
+
+```
+
+Save data
+```{r}
 #save dataframe into proper library data directory
 #save(backwards2_E1, file = "data/backwards2E1_rawDataFromMAT.rda", compress="bzip2")
 saveRDS(backwards2_E1, file = "Data/backwards2E1_rawDataFromMAT.rda", compress="bzip2")
 ```
-
 
