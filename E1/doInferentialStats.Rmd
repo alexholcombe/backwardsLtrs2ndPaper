@@ -39,87 +39,45 @@ estimates<- estimates %>% mutate( exclude = (nPassed==0)  )
 Assess the size of the effect to inform Bayesian test of next experiment (probably use raw units)
 
 ```{r, echo=FALSE, message=FALSE}
-
+require(ggplot2)
 gg<-ggplot(estimates, aes(x=stream, y=efficacy)) + geom_point(color="grey") + stat_summary(fun.y="mean",geom="point",size=4, alpha=.5)
 show(gg)
 
-library(tidyr)
-
-data.table::dcast(df, orientation~stream,value.var="efficacy")
-
-data.table::dcast(df, stream~orientation,value.var="efficacy")
-
-temp<-estimates[,1:5]
-ok<-data.table::dcast(temp, orientation+subject~stream,value.var="efficacy")
-#Good except how do you preserve nPassed? Well, nPassed is the same for every factor combintation
-data.table::dcast(temp, orientation+subject+nPassed~stream,value.var="efficacy")
-#Good so now try with two DVs. 
-temp<-estimates[,1:6]
-data.table::dcast(temp, orientation+subject+nPassed~stream,
-                  value.var=c("efficacy","latency")) #doesn't work
-data.table::dcast(temp, orientation+subject+nPassed~stream,value.var="latency")
+library(data.table)
 
 #The below works but drops many variables, so think about merging later
-eff<- data.table::dcast(temp, orientation+subject+nPassed~stream,value.var="efficacy")
+eff<- data.table::dcast(estimates, orientation+subject+nPassed~stream,value.var="efficacy")
+eff$dv<-"efficacy"
 lat<-data.table::dcast(estimates, orientation+subject+nPassed~stream,value.var="latency") 
-pre<-data.table::dcast(temp, orientation+subject+nPassed~stream,value.var="precision") 
-
-#So now scale up to full dataframe
-
+lat$dv<-"latency"
+pre<-data.table::dcast(estimates, orientation+subject+nPassed~stream,value.var="precision") 
+pre$dv<-"precision"
+all<-rbind(eff,lat,pre)
+#I tried to do the above with a single command but makes an error even though StackOverflow example works
+#https://stackoverflow.com/questions/37332076/from-long-to-wide-data-with-multiple-columns/37332345
+# data.table::dcast(estimates, orientation+subject+nPassed~stream,value.var=c("efficacy","latency"))
+head(eff)
 ```
 
+
+Calculate bias
+```{r , fig.height=40, fig.width=5}
+all$leftBias<- all$Left - all$Right
+hh<-ggplot(all, aes(x=orientation, y=leftBias)) + facet_grid(dv~.) + geom_point(color="grey") + stat_summary(fun.y="mean",geom="point",size=4, alpha=.5)
+hh<-hh+stat_summary(fun.data="mean_cl_boot",geom="errorbar",width=.3,conf.int=.95,
+                  width=5,size=1) 
+show(hh)
+```
+
+Do conventional stats.
 ```{r}
 
+require(ez)
 
-temp<-estimates[1:10,1:5]
-temp$nPassed<-NULL
-data.table::dcast(temp, subject+orientation~stream,value.var="efficacy")
-
-temp %>%
-  gather(key, value, -subject, -orientation, -nPassed, -stream) %>%
-  unite(col, key, stream) %>%
-  spread(col, value)
-
-data.table::dcast(temp, subject+orientation+nPassed~stream,value.var="efficacy")
-
-foo = data.frame(subject=c("AA","AA","AA","AA","AB","AB","AB","AB"),stream=c("Left","Left","Right","Right","Left","Left","Right","Right"),orientation=c("Canonical","Inverted","Canonical","Inverted","Canonical","Inverted","Canonical","Inverted"),efficacy=c(0.8,0.4,0.5,0.7,0.84,.37,.36,.69))
-data.table::dcast(foo, subject+orientation~stream,value.var="efficacy")
-foo.short<- foo[,1:4] #,c(2,3,4)]
-f<-foo[1:4,2:4]
-data.table::dcast(f, orientation~stream,value.var="efficacy")
-
-tempp<-estimates[,4:6]
-temppp<- tempp[,c(1,3)]
-
-library(reshape2)
-
-#data.table functions change things in place
-require(data.table)
-setDT(temp)
-data.table::dcast(temp, subject+orientation+X+nPassed~stream,value.var="efficacy")
-
-dcast(foo,group+num_users~times,value.var=c("action_rate","action_rate_c95"))
-
-dcast(temp, subject+nPassed+X+orientation ~stream, value.var=efficacy)
-?ddcast(tempp, 
-temppp$id<- 1:nrow(temppp)
-dcast(temppp, id~stream)
-dcast(temppp, efficacy~stream+id)
-
-wide <-  estimates %>%
-  tidyr::spread(stream,efficacy)
-
-df$
-  
-leftBias<- estimates %>% group_by(subject) %>% 
-  
-deficitCanonical <- estimates %>% filter( stream=="Left" ) - 
-  
+aa <- ezANOVA(data=filter(all,dv=="efficacy"), dv=leftBias, within=orientation, wid=subject)
+cat("F=", aa$ANOVA$F, " p=", aa$ANOVA$p, "\n", sep="")
 
 ```
-
-Do t tests.
-
 
 Do Bayesian t-test. That is, take the likelihood of the left bias difference observed under the prior and divide it by the likelihood of the left bias difference observed under the null.
 
@@ -127,14 +85,3 @@ http://jeffrouder.blogspot.com.au/2016/01/what-priors-should-i-use-part-i.html
 For the null model, the bias is just zero (delta function).
 
 For our model, support is zero to infinity. 
-
-```{r, echo=FALSE, message=FALSE}
-#want fig.height of 10 per subject
-
-condtnVariableNames <- c("subject","stream", "orientation")  
-
-#Add R parameter estimates to dataframe
-df<- merge(df,estimates) 
-
-
-```
