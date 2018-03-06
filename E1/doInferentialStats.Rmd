@@ -182,7 +182,7 @@ labels<-c("P1E1","P1E2","P1E2v","P2E1")
 meanCohensDs<- mean(cohensDs)
 
 #Specify Alternative (up to constant of proportionality)
-lo=-.6 #lower bound of support
+lo=0 #lower bound of support
 hi=Inf #upper bound of support
 
 altHypothesisPrior=function(delta) {
