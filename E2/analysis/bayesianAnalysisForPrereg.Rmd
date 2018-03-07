@@ -1,0 +1,367 @@
+---
+title: "BayesianAnalysisForPrereg"
+author: "Alex Holcombe"
+date: "2/27/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Illustrate the Bayesian analysis to be done, using the results from E1 as a dummy dataset and showing how the prior is informed by the results of our previous experiments.
+
+Read in parameter estimates
+
+```{r}
+
+estimates<- read.csv(file="../../E1/Results/backwards2E1_paramEstimates.csv", header=TRUE, sep=",")
+estimates$X<- NULL #Not sure where X came from but it's just a row number
+```
+
+
+Exclude Ss who failed likelihood ratio test in all four cases.
+Create new column nPassed for in how many conditions they passed (out of 4).
+
+```{r}
+library(dplyr)
+
+estimates<- estimates %>% mutate(mixModelFitsBetter = pLRtest<.05)
+                       
+condtnVariableNames <- c("subject","stream", "orientation")  
+
+e<- estimates %>%  group_by(subject) %>%
+  summarise(nPassed = sum(mixModelFitsBetter)) 
+estimates<- merge(e,estimates) 
+
+estimates<- estimates %>% mutate( exclude = (nPassed==0)  )
+```
+
+
+Assess the size of the effect to inform Bayesian test of next experiment (probably use raw units)
+
+```{r, echo=FALSE, message=FALSE}
+require(ggplot2)
+gg<-ggplot(estimates, aes(x=stream, y=efficacy)) + geom_point(color="grey") + stat_summary(fun.y="mean",geom="point",size=4, alpha=.5)
+show(gg)
+
+library(data.table)
+
+#The below works but drops many variables, so think about merging later
+eff<- data.table::dcast(estimates, orientation+subject+nPassed~stream,value.var="efficacy")
+eff$dv<-"efficacy"
+lat<-data.table::dcast(estimates, orientation+subject+nPassed~stream,value.var="latency") 
+lat$dv<-"latency"
+pre<-data.table::dcast(estimates, orientation+subject+nPassed~stream,value.var="precision") 
+pre$dv<-"precision"
+all<-rbind(eff,lat,pre)
+#I tried to do the above with a single command but makes an error even though StackOverflow example works
+#https://stackoverflow.com/questions/37332076/from-long-to-wide-data-with-multiple-columns/37332345
+# data.table::dcast(estimates, orientation+subject+nPassed~stream,value.var=c("efficacy","latency"))
+head(eff)
+```
+
+
+Calculate bias
+```{r , fig.height=20, fig.width=5}
+all$leftBias<- all$Left - all$Right
+hh<-ggplot(all, aes(x=orientation, y=leftBias)) + facet_grid(.~dv) + geom_point(color="grey") + stat_summary(fun.y="mean",geom="point",size=4, alpha=.5)
+hh<-hh+stat_summary(fun.data="mean_cl_boot",geom="errorbar",width=.3,conf.int=.95,
+                  width=5,size=1) 
+show(hh)
+```
+
+Print effect size
+```{r}
+leftBiasesCanonical<- filter(all,dv=="efficacy" & orientation=="Canonical")$leftBias
+leftBiasCanonical <- mean( leftBiasesCanonical )
+leftBiasesInverted<- filter(all,dv=="efficacy" & orientation=="Inverted")$leftBias
+leftBiasInverted<- mean(   leftBiasesInverted  )
+leftBiasDiff<- leftBiasCanonical - leftBiasInverted
+leftBias_sd <- sd(   leftBiasesCanonical - leftBiasesInverted )
+```
+
+The leftBiasDiff for this experiment is `r leftBiasDiff` or in Cohen's d `leftBiasDiff / leftBias_sd`, very healthy.
+
+
+```{r, echo=FALSE}
+E1n<- 16
+#Raw effect size plus standard error and sd
+P1E1canonical=.23;  P1E1c_se = .058; P1E1c_sd = P1E1c_se * sqrt(E1n)
+P1E1reversed= .062;  P1E1r_se = .07; P1E1r_sd = P1E1r_se * sqrt(E1n)
+#To calculate sd of the bias diff, consider that the variances sum,
+#therefore first sum the variances then convert back to standard deviation
+#Although only true for *independent* random variables and these unlikely to be totally independent
+P1E1diff_sdCalculated = sqrt( (P1E1c_sd^2 + P1E1r_sd^2) )  #.257
+
+E2n<- 24
+P1E2canonical=.218; P1E2c_se =.034; P1E2c_sd= P1E2c_se * sqrt(E2n)
+P1E2inverted=.017; P1E2i_se =.049; P1E2i_sd = P1E2i_se * sqrt(E2n)
+P1E2diff_sdCalculated = sqrt( (P1E2c_sd^2 + P1E2i_sd^2) ) #.2066
+
+P1E2vertUpright=.188; P1E2vu_se=.043; P1E2vu_sd = P1E2vu_se * sqrt(E2n)
+P1E2vertInverted= -.07; P1E2vi_se=.049; P1E2vi_sd = P1E2vi_se * sqrt(E2n)
+P1E2vdiff_sdCalculated = sqrt( (P1E2vi_sd^2 + P1E2vu_sd^2) )
+
+P1E1leftBiasDiff<- P1E1canonical-P1E1reversed
+P1E2leftBiasDiff<- P1E2canonical - P1E2inverted
+P1E2vertBiasDiff<- P1E2vertUpright - P1E2vertInverted
+#reported as  .258 +/- .047 in the paper
+
+#The diff standard errors are also available from the paper directly. But still need to 
+#convert to SD to get Cohen's d.
+
+P1E1diff_se<-.07; P1E1diff_sd<- P1E1diff_se*sqrt(E2n) 
+P1E2diff_se<-.038; P1E2diff_sd<- P1E2diff_se*sqrt(E2n) 
+P1E2vdiff_se<- .047; P1E2vdiff_sd<- P1E2vdiff_se*sqrt(E2n)
+
+```
+
+What was it for the first paper? For E1,`r P1E1canonical`  Canonical and 
+`r P1E1reversed` Mirror-reversed. Difference is `r P1E1canonical-P1E1reversed`
+. For E2, bias difference very similar at `r P1E2leftBiasDiff`.
+For E2 vertical arrangement, `r P1E2vertBiasDiff`
+
+
+Do conventional stats.
+```{r}
+
+require(ez)
+
+aa <- ezANOVA(data=filter(all,dv=="efficacy"), dv=leftBias, within=orientation, wid=subject)
+cat("F=", aa$ANOVA$F, " p=", aa$ANOVA$p, "\n", sep="")
+
+```
+
+Do Bayesian t-test. That is, take the likelihood of the left bias difference observed under the prior and divide it by the likelihood of the left bias difference observed under the null.
+
+http://jeffrouder.blogspot.com.au/2016/01/what-priors-should-i-use-part-i.html
+For the null model, the bias is just zero (delta function).For our model, support is zero to infinity. 
+
+Look at it first in raw units.
+```{r}
+
+#Specify alternative hypothesis (prior)
+
+#Specify Alternative (up to constant of proportionality)
+lo=0 #lower bound of support
+hi=Inf #upper bound of support
+altDens=function(delta) {
+  y= dnorm(delta,.3,.13)
+  y=y*as.integer(delta>lo)*as.integer(delta<hi) #multiply by zero if outside of support
+}
+
+#Normalize alternative density in case user does not, 
+K=1/integrate(altDens,lower=lo,upper=hi)$value
+f=function(delta) K*altDens(delta)
+
+delta=seq(-.2,1.2,.01)
+
+#Plot Alternative as a density and Null as a point arrow
+maxAlt=max(f(delta))
+plot(delta,f(delta),typ='n',xlab="Left bias difference",ylab="Density",ylim=c(0,1.4*maxAlt),main="Models")
+arrows(0,0,0,1.3*maxAlt,col='darkblue',lwd=2)
+lines(delta,f(delta),col='green',lwd=2)
+legend("topright",legend=c("Null","Alternative","Previous findings"),col=c('darkblue','green','black'),lwd=2)
+
+points(P1E1leftBiasDiff,.1,pch=19)
+points(P1E2leftBiasDiff,.1,pch=19)
+points(P1E2vertBiasDiff,.1,pch=22)
+points(leftBiasDiff,.1,pch=23)
+
+```
+
+Probably better to do it in standardized units (Cohen's d) because otherwise need to create a model of the variance separately (for the data model) so that can calculate the probability of the data given e.g. the null hypothesis.
+
+
+```{r}
+
+P2E1_cohensD <- leftBiasDiff / leftBias_sd
+cohensDs<-c(P1E1leftBiasDiff / P1E1diff_sd,
+            P1E2leftBiasDiff / P1E2diff_sd,
+            P1E2vertBiasDiff / P1E2vdiff_sd,
+            P2E1_cohensD ) 
+labels<-c("P1E1","P1E2","P1E2v","P2E1")
+meanCohensDs<- mean(cohensDs)
+
+```
+
+Our informed prior will be a Gaussian distribution with mean our mean observed effect, `r meanCohensDs` and sigma `r sd(cohensDs)`.
+
+```{r}
+#Specify Alternative (up to constant of proportionality)
+lo=0 #lower bound of support
+hi=Inf #upper bound of support
+
+altHypothesisPrior=function(delta) {
+  mean= meanCohensDs
+  sigma= sd(cohensDs)
+  y= dnorm(delta,mean,sigma)
+  y=y*as.integer(delta>lo)*as.integer(delta<hi) #multiply by zero if outside of support
+}
+#Normalize alternative density in case is not already
+K=1/integrate(altHypothesisPrior,lower=lo,upper=hi)$value
+f=function(delta) K*altHypothesisPrior(delta)
+
+dDomain=seq(-.3,2,.01)
+
+#Plot Alternative as a density and Null as a point arrow
+maxAlt=max(f(delta))
+plot(dDomain,f(dDomain),typ='n',xlab="Left/top bias difference (Cohen's d)",ylab="Density",ylim=c(0,1.4*maxAlt),main="Models")
+arrows(0,0,0,1.3*maxAlt,col='darkblue',lwd=2)
+lines(dDomain,f(dDomain),col='green',lwd=2)
+legend("topright",legend=c("Null","Alternative","Previous findings"),col=c('darkblue','green','black'),lwd=2)
+
+points(cohensDs, rep(.1,4),pch=19) #plot previous effect sizes
+text(cohensDs, c(.25,.35,.25,.25), labels,cex=.75)
+
+```
+
+
+Assume left bias difference found for any particular subject reflect independent normal draws with mean μ and variance σ2. Set variance across Ss based on previous experiments. Take something like the mean variance of those previous experiments. Then use that to generate the probability of any particular result.
+
+Let's say we have a sample size of 50. 
+```{r}
+
+nullPredF=function(obs,N) dt(sqrt(N)*obs,N-1)
+
+#compute the probability of the data (predicted density) for any observed effect size or for all of them. The following code does it for a reasonable range of effect sizes for a sample size of 30. You can change N, the sample size, as needed.
+obsEffectSizes=seq(-2,3,.01)
+N=50
+nullPred=nullPredF(obsEffectSizes,N)
+
+#Getting the probabilites of the data for the alternative is a bit harder. For each nonzero effect size parameter, the distribution of the observed effect follows a noncentral t distribution. Hence, to obtain predictions across all nonzero effect sizeS, we need to integrate the alternative model against the noncentral t distribution. Here is the code with a simple loop:
+  
+altPredIntegrand=function(delta,obs,N) { 
+  dt(sqrt(N)*obs,N-1,sqrt(N)*delta)*f(delta)
+}
+
+altPredF=function(obsEffectSizes,N) {
+  suppressWarnings( integrate(altPredIntegrand,lower=lo,upper=hi,obs=obsEffectSizes,N=N)$value
+  )
+}
+
+#For each effect size, compute density
+I=length(obsEffectSizes)
+altPred=1:I
+for (i in 1:I) {
+  altPred[i] = altPredF(obsEffectSizes[i],N)
+}
+
+#Now we can plot the predictions for all observed effect sizes:
+top=max(altPred,nullPred)
+
+plot(type='l',obsEffectSizes,nullPred,ylim=c(0,top),xlab="Observed Effect Size",ylab="Density",main="P(data|H)",col='darkblue',lwd=2)
+lines(obsEffectSizes,altPred,col='darkgreen',lwd=2)
+legend("topright",legend=c("Null","Alternative"),col=c('darkblue','darkgreen'),lwd=2)
+text(-1.8,.35,"n=50")
+```
+
+BTW get this warning: https://stackoverflow.com/questions/39183938/rs-t-distribution-says-full-precision-may-not-have-been-achieved
+
+```{r}  
+smaller=.3333
+my.es= meanCohensDs * smaller
+
+```
+
+Assume effect size is only `r smaller` as big as original `r meanCohensDs`, yielding `r smaller`
+ . So, both set prior to half as big but with wider variance and show likelihood functions for whole range but highlight that effect size, for a few different sample sizes.
+```{r alternativePrior}
+
+altPrior=function(delta) {
+  mean= my.es
+  sigma= sd(cohensDs)
+  y= dnorm(delta,mean,sigma)
+  y=y*as.integer(delta>lo)*as.integer(delta<hi) #multiply by zero if outside of support
+}
+
+#Normalize alternative density in case user does not, 
+K=1/integrate(altPrior,lower=lo,upper=hi)$value
+altPriorNormalized=function(delta) K*altPrior(delta)
+
+N=75
+```
+Have set alternative prior as smaller effect.
+
+Now visualize likelihoods for N=`r N`
+```{r }
+
+# to obtain predictions across all nonzero effect sizeS, we need to integrate the alternative model against the noncentral t distribution. Here is the code with a simple loop:
+  
+altPredIntegrand=function(delta,obs,N) { 
+  dt(sqrt(N)*obs,N-1,sqrt(N)*delta)*altPriorNormalized(delta)
+}
+
+altPredF=function(obsEffectSizes,N) {
+  suppressWarnings( integrate(altPredIntegrand,lower=lo,upper=hi,obs=obsEffectSizes,N=N)$value
+  )
+}
+
+#For each effect size, compute density
+obsEffectSizes=seq(-1,1.5,.01)
+
+I=length(obsEffectSizes)
+altPred=1:I
+for (i in 1:I) {
+  altPred[i] = altPredF(obsEffectSizes[i],N)
+}
+
+nullPred=nullPredF(obsEffectSizes,N)
+
+#Now we can plot the predictions for all observed effect sizes:
+top=max(altPred,nullPred)
+
+plot(type='l',obsEffectSizes,nullPred,ylim=c(0,top),xlab="Observed Effect Size",ylab="Density",main="P(data|H)",col='darkblue',lwd=2)
+lines(obsEffectSizes,altPred,col='darkgreen',lwd=2)
+legend("topright",legend=c("Null","Alternative"),col=c('darkblue','darkgreen'),lwd=2)
+text(-.9,.35,paste0("n=",N))
+#plot example small effect size points on curve
+abline(v=my.es,lty=2,lwd=2,col='red')
+valNull=nullPredF(my.es,N)
+valAlt=altPredF(my.es,N)
+points(pch=19,c(my.es,my.es),c(valNull,valAlt),col="red")
+text(my.es+.1,valAlt+.1,paste0("BF=",round(valAlt/valNull,2)),col="red")
+
+#plot example large effect size points on curve
+large.es<-1
+abline(v=large.es,lty=2,lwd=2,col='red')
+valNull=nullPredF(large.es,N)
+valAlt=altPredF(large.es,N)
+points(pch=19,c(large.es,large.es),c(valNull,valAlt),col="red")
+text(large.es+.3,valAlt+.1,paste0("BF=",round(valAlt/valNull,2)),col="red")
+```
+And for n=100
+```{r subjexts100}
+#For each effect size, compute density
+obsEffectSizes=seq(-1,1.5,.01)
+
+I=length(obsEffectSizes)
+altPred=1:I
+N=100
+for (i in 1:I) {
+  altPred[i] = altPredF(obsEffectSizes[i],N)
+}
+
+nullPred=nullPredF(obsEffectSizes,N)
+
+#Now we can plot the predictions for all observed effect sizes:
+top=max(altPred,nullPred)
+
+plot(type='l',obsEffectSizes,nullPred,ylim=c(0,top),xlab="Observed Effect Size",ylab="Density",main="P(data|H)",col='darkblue',lwd=2)
+lines(obsEffectSizes,altPred,col='darkgreen',lwd=2)
+legend("topright",legend=c("Null","Alternative"),col=c('darkblue','darkgreen'),lwd=2)
+text(-.9,.35,paste0("n=",N))
+
+#plot example effect size points on curve
+abline(v=my.es,lty=2,lwd=2,col='red')
+valNull=nullPredF(my.es,N)
+valAlt=altPredF(my.es,N)
+points(pch=19,c(my.es,my.es),c(valNull,valAlt),col="red")
+text(my.es+.2,valAlt+.1,paste0("BF=",round(valAlt/valNull,2)),col="red")
+```
+
+To do a true Bayesian power analysis, could follow Lakens here: https://daniellakens.blogspot.com.au/2016/01/power-analysis-for-default-bayesian-t.html
+
+Do the correlogram and correlation
+
