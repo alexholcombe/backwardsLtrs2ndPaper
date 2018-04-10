@@ -38,7 +38,7 @@ estimates<- estimates %>% mutate( exclude = (nPassed==0)  )
 ```
 
 
-Assess the size of the effect to inform Bayesian test of next experiment (probably use raw units)
+Assess the size of the effect to inform Bayesian test of next experiment (originally tried this with raw units, but then realized that makes the stats difficult, I forget why)
 
 ```{r, echo=FALSE, message=FALSE}
 require(ggplot2)
@@ -54,7 +54,7 @@ lat<-data.table::dcast(estimates, orientation+subject+nPassed~stream,value.var="
 lat$dv<-"latency"
 pre<-data.table::dcast(estimates, orientation+subject+nPassed~stream,value.var="precision") 
 pre$dv<-"precision"
-all<-rbind(eff,lat,pre)
+allP2E1<-rbind(eff,lat,pre)
 #I tried to do the above with a single command but makes an error even though StackOverflow example works
 #https://stackoverflow.com/questions/37332076/from-long-to-wide-data-with-multiple-columns/37332345
 # data.table::dcast(estimates, orientation+subject+nPassed~stream,value.var=c("efficacy","latency"))
@@ -64,8 +64,8 @@ head(eff)
 
 Calculate bias
 ```{r , fig.height=20, fig.width=5}
-all$leftBias<- all$Left - all$Right
-hh<-ggplot(all, aes(x=orientation, y=leftBias)) + facet_grid(.~dv) + geom_point(color="grey") + stat_summary(fun.y="mean",geom="point",size=4, alpha=.5)
+allP2E1$leftBias<- allP2E1$Left - allP2E1$Right
+hh<-ggplot(allP2E1, aes(x=orientation, y=leftBias)) + facet_grid(.~dv) + geom_point(color="grey") + stat_summary(fun.y="mean",geom="point",size=4, alpha=.5)
 hh<-hh+stat_summary(fun.data="mean_cl_boot",geom="errorbar",width=.3,conf.int=.95,
                   width=5,size=1) 
 show(hh)
@@ -73,15 +73,15 @@ show(hh)
 
 Print effect size
 ```{r}
-leftBiasesCanonical<- filter(all,dv=="efficacy" & orientation=="Canonical")$leftBias
+leftBiasesCanonical<- filter(allP2E1,dv=="efficacy" & orientation=="Canonical")$leftBias
 leftBiasCanonical <- mean( leftBiasesCanonical )
-leftBiasesInverted<- filter(all,dv=="efficacy" & orientation=="Inverted")$leftBias
+leftBiasesInverted<- filter(allP2E1,dv=="efficacy" & orientation=="Inverted")$leftBias
 leftBiasInverted<- mean(   leftBiasesInverted  )
 leftBiasDiff<- leftBiasCanonical - leftBiasInverted
 leftBias_sd <- sd(   leftBiasesCanonical - leftBiasesInverted )
 ```
 
-The leftBiasDiff for this experiment is `r leftBiasDiff` or in Cohen's d `leftBiasDiff / leftBias_sd`, very healthy.
+The leftBiasDiff for this experiment is `r leftBiasDiff` or in Cohen's d `r leftBiasDiff / leftBias_sd`, very healthy.
 
 
 ```{r, echo=FALSE}
@@ -123,12 +123,12 @@ What was it for the first paper? For E1,`r P1E1canonical`  Canonical and
 For E2 vertical arrangement, `r P1E2vertBiasDiff`
 
 
-Do conventional stats.
+Do conventional stats on P2E1 efficacy leftBias.
 ```{r}
 
 require(ez)
 
-aa <- ezANOVA(data=filter(all,dv=="efficacy"), dv=leftBias, within=orientation, wid=subject)
+aa <- ezANOVA(data=filter(allP2E1,dv=="efficacy"), dv=leftBias, within=orientation, wid=subject)
 cat("F=", aa$ANOVA$F, " p=", aa$ANOVA$p, "\n", sep="")
 
 ```
@@ -138,7 +138,7 @@ Do Bayesian t-test. That is, take the likelihood of the left bias difference obs
 http://jeffrouder.blogspot.com.au/2016/01/what-priors-should-i-use-part-i.html
 For the null model, the bias is just zero (delta function).For our model, support is zero to infinity. 
 
-Look at it first in raw units.
+First, a quick look at it with a custom prior in raw units.
 ```{r}
 
 #Specify alternative hypothesis (prior)
@@ -181,12 +181,12 @@ cohensDs<-c(P1E1leftBiasDiff / P1E1diff_sd,
             P1E2leftBiasDiff / P1E2diff_sd,
             P1E2vertBiasDiff / P1E2vdiff_sd,
             P2E1_cohensD ) 
+print(cohensDs)
 labels<-c("P1E1","P1E2","P1E2v","P2E1")
-meanCohensDs<- mean(cohensDs)
-
+meanCohensD<- mean(cohensDs)
 ```
 
-Our informed prior will be a Gaussian distribution with mean our mean observed effect, `r meanCohensDs` and sigma `r sd(cohensDs)`.
+Our informed prior will be a Gaussian distribution with mean our mean observed effect (as a Cohen's d), `r meanCohensD` and sigma `r sd(cohensDs)`. 
 
 ```{r}
 #Specify Alternative (up to constant of proportionality)
@@ -194,7 +194,7 @@ lo=0 #lower bound of support
 hi=Inf #upper bound of support
 
 altHypothesisPrior=function(delta) {
-  mean= meanCohensDs
+  mean= meanCohensD
   sigma= sd(cohensDs)
   y= dnorm(delta,mean,sigma)
   y=y*as.integer(delta>lo)*as.integer(delta<hi) #multiply by zero if outside of support
@@ -217,7 +217,9 @@ text(cohensDs, c(.25,.35,.25,.25), labels,cex=.75)
 
 ```
 
+To be honest it is hard to know how to set the sigma (width of the prior in the above graph) because how much to think of the previous estimates as estimating the same thing versus being actually different effects?
 
+To do the custom NEED STILL TO CHANGE THIS TO COHEN'S D?
 Assume left bias difference found for any particular subject reflect independent normal draws with mean μ and variance σ2. Set variance across Ss based on previous experiments. Take something like the mean variance of those previous experiments. Then use that to generate the probability of any particular result.
 
 Let's say we have a sample size of 50. 
@@ -261,11 +263,11 @@ BTW get this warning: https://stackoverflow.com/questions/39183938/rs-t-distribu
 
 ```{r}  
 smaller=.3333
-my.es= meanCohensDs * smaller
+my.es= meanCohensD * smaller
 
 ```
 
-Assume effect size is only `r smaller` as big as original `r meanCohensDs`, yielding `r smaller`
+Assume effect size is only `r smaller` as big as original `r meanCohensD`, yielding `r smaller`
  . So, both set prior to half as big but with wider variance and show likelihood functions for whole range but highlight that effect size, for a few different sample sizes.
 ```{r alternativePrior}
 
