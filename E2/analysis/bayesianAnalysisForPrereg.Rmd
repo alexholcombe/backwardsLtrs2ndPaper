@@ -201,15 +201,15 @@ altHypothesisPrior=function(delta) {
 }
 #Normalize alternative density in case is not already
 K=1/integrate(altHypothesisPrior,lower=lo,upper=hi)$value
-f=function(delta) K*altHypothesisPrior(delta)
+prior=function(delta) K*altHypothesisPrior(delta)
 
 dDomain=seq(-.3,2,.01)
 
 #Plot Alternative as a density and Null as a point arrow
-maxAlt=max(f(delta))
-plot(dDomain,f(dDomain),typ='n',xlab="Left/top bias difference (Cohen's d)",ylab="Density",ylim=c(0,1.4*maxAlt),main="Models")
+maxAlt=max(prior(delta))
+plot(dDomain,prior(dDomain),typ='n',xlab="Left/top bias difference (Cohen's d)",ylab="Density",ylim=c(0,1.4*maxAlt),main="Models")
 arrows(0,0,0,1.3*maxAlt,col='darkblue',lwd=2)
-lines(dDomain,f(dDomain),col='green',lwd=2)
+lines(dDomain,prior(dDomain),col='green',lwd=2)
 legend("topright",legend=c("Null","Alternative","Previous findings"),col=c('darkblue','green','black'),lwd=2)
 
 points(cohensDs, rep(.1,4),pch=19) #plot previous effect sizes
@@ -238,7 +238,7 @@ nullPred=nullPredF(obsEffectSizes,N)
 
 altPredIntegrand=function(delta,obs,N) {
   #call the student-t distribution, with delta the effect size 
-  dt(sqrt(N)*obs,N-1,sqrt(N)*delta)*f(delta)
+  dt(sqrt(N)*obs,N-1,sqrt(N)*delta)*prior(delta)
 }
 
 altPredF=function(obs,N) {
@@ -270,10 +270,10 @@ BTW get this warning: https://stackoverflow.com/questions/39183938/rs-t-distribu
 ```{r}  
 smaller=.3333
 my.es= meanCohensD * smaller
-my.sd = sd(cohensDs)
+my.sd = sd(cohensDs) * 1.5
 ```
 
-Assume effect size is only `r smaller` as big as original `r meanCohensD`, yielding `r smaller`
+Assume effect size is only `r smaller` as big as original `r meanCohensD`, yielding `r my.es`
  . So, both set prior to half as big and show likelihood functions for whole range but highlight that effect size, for a few different sample sizes.
 For standard deviation of prior  will use `r my.sd`
 ```{r alternativePrior}
@@ -289,21 +289,39 @@ altPrior=function(delta) {
 K=1/integrate(altPrior,lower=lo,upper=hi)$value
 altPriorNormalized=function(delta) K*altPrior(delta)
 
+
+#Plot this new smaller-effect prior
+dDomain=seq(-.3,2,.01)
+
+#Plot Alternative as a density and Null as a point arrow
+maxAlt=max(altPriorNormalized(delta))
+plot(dDomain,altPriorNormalized(dDomain),typ='n',xlab="Left/top bias difference (Cohen's d)",ylab="Density",ylim=c(0,1.4*maxAlt),main="New prior putting more density over smaller effect sizes")
+arrows(0,0,0,1.3*maxAlt,col='darkblue',lwd=2)
+lines(dDomain,altPriorNormalized(dDomain),col='green',lwd=2)
+legend("topright",legend=c("Null","Alternative","Previous findings"),col=c('darkblue','green','black'),lwd=2)
+
+points(cohensDs, rep(.1,4),pch=19) #plot previous effect sizes
+text(cohensDs, c(.25,.35,.25,.25), labels,cex=.75)
+```
+
+
+``` {r}
 N=75
 ```
-Have set alternative prior as smaller effect.
+
+
 
 Now visualize likelihoods for N=`r N`
 ```{r }
 
 # to obtain predictions across all nonzero effect sizeS, we need to integrate the alternative model against the noncentral t distribution. Here is the code with a simple loop:
-  
+
 altPredIntegrand=function(delta,obs,N) { 
   dt(sqrt(N)*obs,N-1,sqrt(N)*delta)*altPriorNormalized(delta)
 }
 
-altPredF=function(obsEffectSizes,N) {
-  suppressWarnings( integrate(altPredIntegrand,lower=lo,upper=hi,obs=obsEffectSizes,N=N)$value
+altPredF=function(obs,N) {
+  suppressWarnings( integrate(altPredIntegrand,lower=lo,upper=hi,obs=obs,N=N)$value
   )
 }
 
@@ -325,12 +343,19 @@ plot(type='l',obsEffectSizes,nullPred,ylim=c(0,top),xlab="Observed Effect Size",
 lines(obsEffectSizes,altPred,col='darkgreen',lwd=2)
 legend("topright",legend=c("Null","Alternative"),col=c('darkblue','darkgreen'),lwd=2)
 text(-.9,.35,paste0("n=",N))
-#plot example small effect size points on curve
+#plot example small effect size point on curve
 abline(v=my.es,lty=2,lwd=2,col='red')
 valNull=nullPredF(my.es,N)
 valAlt=altPredF(my.es,N)
 points(pch=19,c(my.es,my.es),c(valNull,valAlt),col="red")
-text(my.es+.1,valAlt+.1,paste0("BF=",round(valAlt/valNull,2)),col="red")
+text(my.es+.1,valAlt+.1,paste0("BF=",round(valAlt/valNull,1)),col="red")
+
+#plot example even smaller effect size points on curve
+abline(v=my.es-.1,lty=2,lwd=2,col='red')
+valNull=nullPredF(my.es-.1,N)
+valAlt=altPredF(my.es-.1,N)
+points(pch=19,c(my.es-.1,my.es-.1),c(valNull,valAlt),col="red")
+text(my.es-.2,valAlt+.1,paste0("BF=",round(valAlt/valNull,1)),col="red")
 
 #plot example large effect size points on curve
 large.es<-1
@@ -338,16 +363,22 @@ abline(v=large.es,lty=2,lwd=2,col='red')
 valNull=nullPredF(large.es,N)
 valAlt=altPredF(large.es,N)
 points(pch=19,c(large.es,large.es),c(valNull,valAlt),col="red")
-text(large.es+.3,valAlt+.1,paste0("BF=",round(valAlt/valNull,2)),col="red")
+text(large.es+.3,valAlt-.1,paste0("BF=",round(valAlt/valNull,1)),col="red")
 ```
-And for n=100
-```{r subjexts100}
+
+```{r echo=FALSE, message=FALSE}
+N=100
+```
+
+And for n=`r N`                    
+
+
+```{r subjexts100, echo=FALSE}
 #For each effect size, compute density
 obsEffectSizes=seq(-1,1.5,.01)
 
 I=length(obsEffectSizes)
 altPred=1:I
-N=100
 for (i in 1:I) {
   altPred[i] = altPredF(obsEffectSizes[i],N)
 }
@@ -367,10 +398,19 @@ abline(v=my.es,lty=2,lwd=2,col='red')
 valNull=nullPredF(my.es,N)
 valAlt=altPredF(my.es,N)
 points(pch=19,c(my.es,my.es),c(valNull,valAlt),col="red")
-text(my.es+.2,valAlt+.1,paste0("BF=",round(valAlt/valNull,2)),col="red")
+text(my.es+.2,valAlt+.1,paste0("BF=",round(valAlt/valNull,1)),col="red")
+
+#plot example even smaller effect size points on curve
+abline(v=my.es-.1,lty=2,lwd=2,col='red')
+valNull=nullPredF(my.es-.1,N)
+valAlt=altPredF(my.es-.1,N)
+points(pch=19,c(my.es-.1,my.es-.1),c(valNull,valAlt),col="red")
+text(my.es-.15,valAlt,paste0("BF=",round(valAlt/valNull,1)),col="red")
+
 ```
+
+So in summary, the above two graphs with associated blocks of code show how the Bayes factor will be calculated for whatever observed effect size turns up, and is thus suitable for citing in the prereg document. To boil it down, the prior we'll be using is simply a Gaussian truncated at zero (bright green curve several plots ago with mean Cohen's d = `r my.es` and sigma = `r my.sd` but it does mean that even with n=100, an observed effect size of `r round(my.es-.1,2)` means the evidence is very ambiguous (Bayes factor close to 1, specifically `r round(valAlt/valNull,1)` )
 
 To do a true Bayesian power analysis, could follow Lakens here: https://daniellakens.blogspot.com.au/2016/01/power-analysis-for-default-bayesian-t.html
 
-Do the correlogram and correlation
 
