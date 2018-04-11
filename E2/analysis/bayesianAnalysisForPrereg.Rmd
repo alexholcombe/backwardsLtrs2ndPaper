@@ -217,33 +217,39 @@ text(cohensDs, c(.25,.35,.25,.25), labels,cex=.75)
 
 ```
 
-To be honest it is hard to know how to set the sigma (width of the prior in the above graph) because how much to think of the previous estimates as estimating the same thing versus being actually different effects?
+To be honest it is hard to know how to set the sigma (width of the prior in the above graph) because how much to think of the previous estimates as estimating the same thing versus being actually different effects? Setting it to the sd of the previous results looks reasonable.
 
-To do the custom NEED STILL TO CHANGE THIS TO COHEN'S D?
-Assume left bias difference found for any particular subject reflect independent normal draws with mean μ and variance σ2. Set variance across Ss based on previous experiments. Take something like the mean variance of those previous experiments. Then use that to generate the probability of any particular result.
+To calculate Bayes factors, first
+generate the probability of any particular result according to the null hypothesis and according to the alternative hypothesis. For the alternative, integrate over the whole prior distribution of effect sizes, weighting by the prior.
 
 Let's say we have a sample size of 50. 
 ```{r}
 
+#The predicted density of data for the null is below; it's related to the central t distribution.
 nullPredF=function(obs,N) dt(sqrt(N)*obs,N-1)
 
 #compute the probability of the data (predicted density) for any observed effect size or for all of them. The following code does it for a reasonable range of effect sizes for a sample size of 30. You can change N, the sample size, as needed.
-obsEffectSizes=seq(-2,3,.01)
+obsEffectSizes=seq(-2,3,.01) #a list of thousands of possible Cohen's ds we might observe
 N=50
 nullPred=nullPredF(obsEffectSizes,N)
+#nullPred is the height of the density function under the null hypothesis at each cohen's d obsEffectSize
 
-#Getting the probabilites of the data for the alternative is a bit harder. For each nonzero effect size parameter, the distribution of the observed effect follows a noncentral t distribution. Hence, to obtain predictions across all nonzero effect sizeS, we need to integrate the alternative model against the noncentral t distribution. Here is the code with a simple loop:
-  
-altPredIntegrand=function(delta,obs,N) { 
+#Getting the probabilites of the data for the alternative is a bit harder. For each nonzero effect size parameter, the distribution of the observed effect follows a noncentral t distribution. Hence, to obtain predictions across all nonzero effect sizes, we need to integrate the alternative model (with, in the prior, its different height in the density for each possible effect size) against the noncentral t distribution.
+
+altPredIntegrand=function(delta,obs,N) {
+  #call the student-t distribution, with delta the effect size 
   dt(sqrt(N)*obs,N-1,sqrt(N)*delta)*f(delta)
 }
 
-altPredF=function(obsEffectSizes,N) {
-  suppressWarnings( integrate(altPredIntegrand,lower=lo,upper=hi,obs=obsEffectSizes,N=N)$value
+altPredF=function(obs,N) {
+  #integrate delta from lo to hi, for one particular possible observed effect size. Because calculating the 
+  # probability of the observed effect size for each imagined true effect size.
+  suppressWarnings( integrate(altPredIntegrand,lower=lo,upper=hi,obs=obs,N=N)$value
   )
 }
 
-#For each effect size, compute density
+#For each observed effect size, compute density of the alternative - essentially the probability of that 
+#outcome according to the alternative hypothesis.
 I=length(obsEffectSizes)
 altPred=1:I
 for (i in 1:I) {
@@ -264,16 +270,17 @@ BTW get this warning: https://stackoverflow.com/questions/39183938/rs-t-distribu
 ```{r}  
 smaller=.3333
 my.es= meanCohensD * smaller
-
+my.sd = sd(cohensDs)
 ```
 
 Assume effect size is only `r smaller` as big as original `r meanCohensD`, yielding `r smaller`
- . So, both set prior to half as big but with wider variance and show likelihood functions for whole range but highlight that effect size, for a few different sample sizes.
+ . So, both set prior to half as big and show likelihood functions for whole range but highlight that effect size, for a few different sample sizes.
+For standard deviation of prior  will use `r my.sd`
 ```{r alternativePrior}
 
 altPrior=function(delta) {
   mean= my.es
-  sigma= sd(cohensDs)
+  sigma= my.sd
   y= dnorm(delta,mean,sigma)
   y=y*as.integer(delta>lo)*as.integer(delta<hi) #multiply by zero if outside of support
 }
