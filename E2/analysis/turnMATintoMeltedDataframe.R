@@ -1,5 +1,6 @@
 #Loads raw data from MATLAB files for second backwards paper first experiment
 require(R.matlab)
+library(tibble)
 
 #define function to be used below
 turnMATintoMeltedDataframe<- function(fromMAT) {
@@ -79,7 +80,7 @@ turnMATintoMeltedDataframe<- function(fromMAT) {
   library(purrr) #for map_if
   #data.frames and tibbles must have all atomic or list entries, not arrays, therefore
   #turn any remaining arrays (like letterSequence) into list so tidyverse operations can be done
-  E<- map_if(E,is.matrix,~split(.,seq(nrow(.)))) %>% as_tibble #https://stackoverflow.com/questions/51622017/change-all-array-columns-of-a-data-frame-into-lists
+  E<- map_if(E,is.matrix,~split(.,seq(nrow(.)))) %>% tibble::as_tibble() #https://stackoverflow.com/questions/51622017/change-all-array-columns-of-a-data-frame-into-lists
   
   names(E)[names(E) == 'allTargets'] <- 'targetSP'
   # allLetterOrder         : num [1:216, 1:2, 1:16] 13 6 9 1 10 16 11 1 12 8 ...

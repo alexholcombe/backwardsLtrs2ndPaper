@@ -81,7 +81,7 @@ E<- E %>% mutate(targetSide = case_when(targetSide==0 ~ "both",
 
 Next is very TIME CONSUMING.
 
-Break out into target position -3, -2 etc. the targetStreamOrient
+Break out into target position -3, -2 etc. the targetStreamOrient variable that contains the orientaiton of each item. This will allow seeing whether having several orientations in a row triggers the lateral bias.
 
 ```{r veryTimeConsuming}
 #Need to decompose into SPE=-3 orientation, SPE=-2 orientation, etc.
@@ -95,14 +95,15 @@ for (i in 1:nrow(E)) {
   #targetPos <- row$targetSP
   #If targetSP == NaN, it's a one-target trial and wrong side
   if (is.nan(E[i,]$targetSP)) {
-    E[i,]$orientMinus3<- NaN
+    E[i,]$orientMinus3 <- NaN
   } else {
-    E[i,]$orientMinus3<- E[i,]$targetStreamOrientations[[1]][    E[i,]$targetSP -3    ]
-    E[i,]$orientMinus2<- E[i,]$targetStreamOrientations[[1]][    E[i,]$targetSP -2    ]
-    E[i,]$orientMinus1<- E[i,]$targetStreamOrientations[[1]][    E[i,]$targetSP -1    ]
-    E[i,]$orient0<- E[i,]$targetStreamOrientations[[1]][    E[i,]$targetSP    ]
-    E[i,]$orientPlus1<- E[i,]$targetStreamOrientations[[1]][    E[i,]$targetSP +1    ]
-    E[i,]$orientPlus2<- E[i,]$targetStreamOrientations[[1]][    E[i,]$targetSP +2    ]
+    E[i,]$orientMinus4 <- E[i,]$targetStreamOrientations[[1]][    E[i,]$targetSP -4    ]
+    E[i,]$orientMinus3 <- E[i,]$targetStreamOrientations[[1]][    E[i,]$targetSP -3    ]
+    E[i,]$orientMinus2 <- E[i,]$targetStreamOrientations[[1]][    E[i,]$targetSP -2    ]
+    E[i,]$orientMinus1 <- E[i,]$targetStreamOrientations[[1]][    E[i,]$targetSP -1    ]
+    E[i,]$orient0 <- E[i,]$targetStreamOrientations[[1]][    E[i,]$targetSP    ]
+    E[i,]$orientPlus1 <- E[i,]$targetStreamOrientations[[1]][    E[i,]$targetSP +1    ]
+    E[i,]$orientPlus2 <- E[i,]$targetStreamOrientations[[1]][    E[i,]$targetSP +2    ]
   }
 }
 

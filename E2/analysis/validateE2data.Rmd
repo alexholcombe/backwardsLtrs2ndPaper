@@ -12,17 +12,17 @@ targetSide ==0  means targets on both sides
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-Modified from importE1data.R
+Checking some stuff out
 
 ```{r set up functions}
 
 #Loads raw data from MATLAB files for second backwards paper second experiment
 require(R.matlab)
 
-GoogleDrivePath<-".." # to main E2 folder
+mainPath<-".." # to main E2 folder
 
 #Second experiment of second backwards-letters paper. random orientation each frame.
-rawDataPath<- file.path(GoogleDrivePath,
+rawDataPath<- file.path(mainPath,
                             "Data/RawData/Data")
 #raw data path containing .mat file for each subject
 
@@ -63,7 +63,7 @@ readInAllFiles<- function(rawDataPath) {
 }
 ```
 
-```{r read raw data}
+```{r readRawData}
 
 E<- readInAllFiles(rawDataPath)
 
@@ -89,12 +89,13 @@ table(CU$target,CU$targetSide, useNA="always")
 table(CU$targetSide, CU$targetSP, useNA="always")
 ```
 
-Why is it that letterSeq is still in with all its values, but allLetterOrientations etc only has one? As you can see below, you literally can't slice
+The below works now that turnMATintoMeltedDataframe takes care of the list elements
 
 ```{r}
-CUall <- E[ ,E$subject=="CU" ]
+#CUall <- E[ ,E$subject=="CU" ]
+CUall <- E %>% filter(subject=="CU")
 i<- E$subject == "CU"
-E[i,] #doens't work. You can't slice a dataframe that has a list (letterSeq) as a member, yet no error message!
+E[i,] #previously didn't work. You can't slice a dataframe that has a list (letterSeq) as a member.
 subset(E, subject=="CU")
 j<- En$subject == "CU"
 EnCU<- En[j,]
@@ -187,8 +188,8 @@ Look at 1-target performance, understand that variable better because didn't exi
 
 The first table printed below could easily fool you into thinking that stream (Left, Right) and targetSide (1,2) are not consistent. We think that's because it records something for both sides (stream variable) even when there is only 1 target (targetSide == 1 or 2 rather than 0, which means two targets).
 
-ALEX TO-DO
-Disaggregating and thus preserving the all variables, like allLetterOrientations and allTargetORientations
+I Disaggregated allLetterOrientations - done by importE2data.Rmd which renames it targetStreamOrientations
+
 Also maybe give targetSide values that make more common sense, like "dual", "left", and "right"
 
 But the second table below shows that they make sense, as they are only inconsistent when allResponseOrientations==NaN.  But what the hell are those trials where  allResponseOrientations==NaN?
@@ -204,5 +205,5 @@ table(E2$stream,E2$targetSide,E2$numTargets, useNA="always")
 
 table(one$stream,one$targetSide,one$orientation,useNA="always")
 
-table(one$stream,one$targetSide,one$allResponseOrientations,useNA="always")
+#table(one$stream,one$targetSide,one$allResponseOrientations,useNA="always")
 ```
