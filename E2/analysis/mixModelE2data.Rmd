@@ -59,8 +59,9 @@ NaNs for targetSP indicate one-target trials, which are also indicated by target
 table(E2$targetSP, E2$targetSide, dnn=c("targetSP","targetSide"), useNA="ifany")
 
 ```
-Proportion of one-target trials seems to be `r table(is.nan(df$targetSP))["TRUE"] / sum( table(is.nan(df$targetSP)) )
-`
+Proportion of one-target trials seems to be 
+`nrow(E2 %>% filter(targetSide!="Both")) / nrow(E2)`
+
 
 Sanity-check some data by graphing.
 
@@ -80,7 +81,7 @@ Try to analyze one bit of data.
 ```{r}
 library(mixRSVP)
 dg<-E2 %>% filter(subject=="AA")
-dg<-dg %>% filter( !is.nan(targetSP) )
+dg<-dg %>% filter( !is.nan(targetSP) ) #excluding 1-target trials rows reporting stream on opposite side. Eventually, use those to evaluate swaps.
 
 analyzeOneCondition(dg,numItemsInStream,parameterBounds(),nReplicates=2)
 
@@ -88,19 +89,15 @@ analyzeOneConditionDF(dg,numItemsInStream,parameterBounds(),nReplicates=2)
 
 ```
 
-Maybe do the one-target trials first, might be faster.
+Analyse one subject, all conditions.
 ```{r, echo=FALSE}
-one<- dg %>% filter(targetSide != "Both")
+#one<- dg %>% filter(targetSide != "Both")
 
 condtnVariableNames <- c("subject","targetSide", "stream", "orientation")  
-#It seems there are no rows for one-target (targetSide!="Both") and stream!=targetSide,
-# which would mean that I can't test for stream swaps in the one-target condition
 
-estimates<- dg  %>%  #  filter(subject=="AA") %>%
+estimatesAA<- dg  %>%  
     group_by_(.dots = condtnVariableNames) %>%  #.dots needed when you have a variable containing multiple factor names
     do(  analyzeOneConditionDF(.,numItemsInStream,parameterBounds(),nReplicates=5) )
-
-
 ```
 
 
@@ -111,8 +108,7 @@ library(mixRSVP)
 
 #Bizarrely, when knitting this often quits after only 6 parameter estimates. Don't know if there's some function fitting error catch problem
   
-
-estimates<- df  %>% filter(subject=="AA") %>%
+estimates<- df  %>%  filter( !is.nan(targetSP) ) %>%
     group_by_(.dots = condtnVariableNames) %>%  #.dots needed when you have a variable containing multiple factor names
     do(  analyzeOneConditionDF(.,numItemsInStream,parameterBounds(),nReplicates=5) )
 
