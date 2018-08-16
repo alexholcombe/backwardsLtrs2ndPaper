@@ -1,0 +1,1 @@
+All these graphs/error-bars in this folder were generated using the ‘Two within-subjects variables’ method described here: http://www.cookbook-r.com/Graphs/Plotting_means_and_error_bars_(ggplot2)/

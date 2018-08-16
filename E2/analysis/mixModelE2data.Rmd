@@ -1,0 +1,89 @@
+---
+title: "mixModelE1data"
+author: "Alex Holcombe"
+date: '`r format(Sys.Date(), "%B %d, %Y")`'
+output: html_document
+---
+
+```{r setup, include=FALSE, message=FALSE}
+knitr::opts_chunk$set(echo = TRUE,  comment = NA)
+```
+
+Load data
+
+```{r load data, echo=FALSE, message=FALSE}
+
+
+#Import data that was changed from MATLAB raw to R dataframe by importE2data.Rmd
+dataPath<- file.path("..","Data")
+#Experiment was administered by MATLAB
+#.mat file been preprocessed into melted long dataframe by importE1data.Rmd
+data<- readRDS( file.path(dataPath, "backwards2E2_rawDataFromMAT.rda") ) 
+
+#tidy data
+library(dplyr)
+df<- data
+#to work with dplyr, can't have array field like letterSeq
+df$letterSeq<- NULL
+
+numItemsInStream<- length( data$letterSeq[1,] )  
+minSPE<- -17; maxSPE<- 17
+
+```
+
+Why are there NaNs for targetSP?
+```{r}
+table(is.nan(df$targetSP))
+
+```
+
+Sanity-check some data by graphing.
+
+Investigate whether pathological identicalness of inverted/canonical happens, that happened in E1 . Seems it doesn't
+
+```{r}
+dg<- df %>% filter(subject < "AC")
+
+library(ggplot2)
+g=ggplot(dg, aes(x=SPE)) + facet_grid(subject+orientation~stream) #,  scales="free_y")
+g<-g+geom_histogram(binwidth=1,color="grey90") + xlim(minSPE,maxSPE)
+g<-g+ geom_text(x=12, y= 33, aes(label = subject)) #inset subject name/number. Unfortunately it overwrites itself a million times
+show(g)
+```
+
+Try to analyze one bit of data.
+WHY ARE THERE NANS IN TARGETSP?
+```{r}
+library(mixRSVP)
+dg<-df %>% filter(subject=="AA")
+analyzeOneCondition(dg,numItemsInStream,parameterBounds(),nReplicates=5)
+
+analyzeOneConditionDF(df %>% filter(subject=="AA"),numItemsInStream,parameterBounds(),nReplicates=5)
+
+```
+
+Fit mixture model with R (if fitting not previously done and cached). 
+```{r, echo=FALSE}
+
+library(mixRSVP)
+
+#Bizarrely, when knitting this often quits after only 6 parameter estimates. Don't know if there's some function fitting error catch problem
+  
+condtnVariableNames <- c("subject","stream", "orientation")  
+
+estimates<- df  %>% filter(subject=="AA") %>%
+    group_by_(.dots = condtnVariableNames) %>%  #.dots needed when you have a variable containing multiple factor names
+    do(  analyzeOneConditionDF(.,numItemsInStream,parameterBounds(),nReplicates=5) )
+
+
+head(estimates)
+```
+
+Save the param estimates to a file.
+```{Save param estimates, echo=FALSE}
+
+write.csv(estimates, file = "Results/backwards2E2_paramEstimates.csv")
+#saveRDS(estimates, file = "Data/backwards2E1_paramEstimates.rda", compress="bzip2")
+
+```
+Done.

@@ -1,0 +1,134 @@
+---
+title: "importE2data"
+author: "Alex Holcombe"
+date: "2/27/2018"
+output: html_document
+---
+
+1/3 of trials have 1 target (numTargets==1)
+targetSide ==0  means targets on both sides 
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Modified from importE1data.R
+
+```{r set up functions}
+
+#Loads raw data from MATLAB files for second backwards paper second experiment
+require(R.matlab)
+
+mainPath<-".." # to main E2 folder
+
+#Second experiment of second backwards-letters paper. random orientation each frame.
+rawDataPath<- file.path(mainPath,
+                            "Data/RawData/Data")
+#raw data path containing .mat file for each subject
+
+source(file.path("turnMATintoMeltedDataframe.R"))
+#cat("Here are the files in the raw data directory")
+#dir(rawDataPath)
+```
+
+```{r}
+library(dplyr)
+readInAllFiles<- function(rawDataPath) {
+
+  files <- dir(path=rawDataPath,pattern='.mat')  #find all data files in this directory
+  dfAll<-data.frame()
+  for (i in 1:length(files)) { #read in each file
+    fileThis<- file.path(rawDataPath,files[i])
+    rawDataLoad=tryCatch(
+      readMat(fileThis),
+      error=function(e) {
+        stop( paste0("ERROR reading the file ",fileThis," :",e) )
+      } )
+    apparentSubjectName <- strsplit(files[i],split="_")[[1]][1]
+    subjectName<- rawDataLoad$participantID[[1]]
+    if (apparentSubjectName != subjectName) {
+      stop( paste0("WARNING apparentSubjectName",apparentSubjectName," from filename does not match subjectName in data structure",subjectName) )
+    }
+    else { cat(paste0(' Subject ',apparentSubjectName,' read in')) }
+    rawDataLoad$file <- files[i]
+
+    dfThis<- turnMATintoMeltedDataframe(rawDataLoad)
+
+    tryCatch(
+      dfAll<-rbind(dfAll,dfThis), #if fail to bind new with old,
+      error=function(e) { #Give feedback about how the error happened
+        cat(paste0("Tried to merge but error:",e) )
+      } )
+  }
+  return(dfAll)
+}
+```
+
+```{r read raw data}
+
+E<- readInAllFiles(rawDataPath)
+#TT<- as_tibble(E).  Seems to have no effect because weird hybrid type
+
+
+#Calculate the serial position error
+E$SPE<- E$respSP - E$targetSP
+
+#give targetSide values that make  sense, like "dual", "left", and "right"
+E<- E %>% mutate(targetSide = case_when(targetSide==0 ~ "both", 
+                                       targetSide==1 ~"left", targetSide==2 ~"right",
+                                       TRUE ~ "unexpected value"))
+```
+
+Next is very TIME CONSUMING.
+
+Break out into target position -3, -2 etc. the targetStreamOrient
+
+```{r veryTimeConsuming}
+#Need to decompose into SPE=-3 orientation, SPE=-2 orientation, etc.
+#Hm, can I use list apply to go through every row and pull out relevant bits?
+#Very time-consuming!
+E$orientMinus3<- -99; E$orientMinus2<- -99; E$orientMinus1<- -99; E$orient0<- -99; E$orientPlus1<- -99; E$orientPlus2<- -99;
+
+for (i in 1:nrow(E)) {
+  #row<- E[i,]
+  #orientsThis <- row$targetStreamOrientations[[1]]
+  #targetPos <- row$targetSP
+  #If targetSP == NaN, it's a one-target trial and wrong side
+  if (is.nan(E[i,]$targetSP)) {
+    E[i,]$orientMinus3<- NaN
+  } else {
+    E[i,]$orientMinus3<- E[i,]$targetStreamOrientations[[1]][    E[i,]$targetSP -3    ]
+    E[i,]$orientMinus2<- E[i,]$targetStreamOrientations[[1]][    E[i,]$targetSP -2    ]
+    E[i,]$orientMinus1<- E[i,]$targetStreamOrientations[[1]][    E[i,]$targetSP -1    ]
+    E[i,]$orient0<- E[i,]$targetStreamOrientations[[1]][    E[i,]$targetSP    ]
+    E[i,]$orientPlus1<- E[i,]$targetStreamOrientations[[1]][    E[i,]$targetSP +1    ]
+    E[i,]$orientPlus2<- E[i,]$targetStreamOrientations[[1]][    E[i,]$targetSP +2    ]
+  }
+}
+
+# More explicit way of doing it below but might take more time.
+# for (i in 1:nrow(E)) {
+#   row<- E[i,]
+#   orientsThis <- row$targetStreamOrientations[[1]]
+#   targetPos <- row$targetSP
+#   #If targetSP == NaN, it's a one-target trial and wrong side
+#   if (is.nan(targetPos)) {
+#     E[i,]$orientMinus3<- NaN
+#   }
+#   E[i,]$orientMinus3<- orientsThis[targetPos-3]
+#   #E[i,]$orientMinus3<- E[i,]$targetStreamOrientations[[1]][targetPos-3]
+#   E[i,]$orientMinus2<- orientsThis[targetPos-2]
+#   E[i,]$orientMinus1<- orientsThis[targetPos-1]
+#   E[i,]$orient0<- orientsThis[targetPos] #should be same as $targetOrient
+#   E[i,]$orientPlus1<- orientsThis[targetPos+1]
+#   E[i,]$orientPlus2<- orientsThis[targetPos+2]
+# }
+```
+
+Saving data.
+```{r saveData}
+backwards2_E2 <- E
+pathToSave <- file.path( "..","Data")
+saveRDS(backwards2_E2, file = "../Data/backwards2E1_rawDataFromMAT.rda", compress="bzip2")
+```
+

@@ -1,0 +1,75 @@
+---
+title: "inspect histograms"
+author: "Alex Holcombe"
+date: "2/26/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Load data
+
+```{r load data, echo=FALSE, message=FALSE}
+
+#Import raw data
+dataPath<- file.path("../Data/")
+#Experiment was administered by MATLAB
+#.mat file been preprocessed into melted long dataframe by importE1data.Rmd
+data<- readRDS( file.path(dataPath, "backwards2E2_rawDataFromMAT.rda") ) 
+
+#tidy data
+library(dplyr)
+df<- data
+#to work with dplyr, can't have array field like letterSeq
+df$letterSeq<- NULL
+
+
+```
+
+
+Set up the experiment-specific parameters 
+
+```{r detailsNeeded}
+
+numItemsInStream<- length( data$letterSeq[1,] )  
+minSPE<- -17; maxSPE<- 17
+annotateIt<-TRUE
+
+numSs<-length(unique(df$subject))
+cat( paste0('Total num Ss=',numSs) )
+```
+
+Plot sample histograms, make sure plotting working.
+
+```{r}
+dg<- df %>% filter(subject < "AC")
+
+library(ggplot2)
+g=ggplot(dg, aes(x=SPE)) + facet_grid(subject+orientation~stream) #,  scales="free_y")
+g<-g+geom_histogram(binwidth=1,color="grey90") + xlim(minSPE,maxSPE)
+g<-g+ geom_text(x=12, y= 33, aes(label = subject)) #inset subject name/number. Unfortunately it overwrites itself a million times
+show(g)
+
+```
+
+Plot all Ss
+```{r, fig.height=200, fig.width=10}
+g=ggplot(df, aes(x=SPE)) + facet_grid(subject+orientation~stream) #,  scales="free_y")
+g<-g+geom_histogram(binwidth=1,color="grey90") + xlim(minSPE,maxSPE)
+g<-g+ geom_text(x=12, y= 33, aes(label = subject)) #inset subject name/number. Unfortunately it overwrites itself a million times
+
+show(g)
+```
+
+CY is bimodal but not outrageously so.
+
+Subject AP looks to both have close to zero efficacy in some conditions and disregards instructions, reporting mostly after the cue.
+
+BJ has essentially zero efficacy and may have tended to report letters from beginning of stream in one condition.
+
+SsWhoLookWeird<-c("CY","AP","BJ")
+
+We'll see whether the statistical comparison of mixture modeling to guessing distribution flags these as not being fit significantly better by mixture model. 
+

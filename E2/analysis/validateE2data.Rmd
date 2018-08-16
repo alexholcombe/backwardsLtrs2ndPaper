@@ -1,0 +1,208 @@
+---
+title: "importE2data"
+author: "Alex Holcombe"
+date: "2/27/2018"
+output: html_document
+---
+
+1/3 of trials have 1 target (numTargets==1)
+targetSide ==0  means targets on both sides 
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Modified from importE1data.R
+
+```{r set up functions}
+
+#Loads raw data from MATLAB files for second backwards paper second experiment
+require(R.matlab)
+
+GoogleDrivePath<-".." # to main E2 folder
+
+#Second experiment of second backwards-letters paper. random orientation each frame.
+rawDataPath<- file.path(GoogleDrivePath,
+                            "Data/RawData/Data")
+#raw data path containing .mat file for each subject
+
+source(file.path("turnMATintoMeltedDataframe.R"))
+cat("Here are the files in the raw data directory")
+dir(rawDataPath)
+```
+
+```{r}
+readInAllFiles<- function(rawDataPath) {
+
+  files <- dir(path=rawDataPath,pattern='.mat')  #find all data files in this directory
+  dfAll<-data.frame()
+  for (i in 1:length(files)) { #read in each file
+    fileThis<- file.path(rawDataPath,files[i])
+    rawDataLoad=tryCatch(
+      readMat(fileThis),
+      error=function(e) {
+        stop( paste0("ERROR reading the file ",fileThis," :",e) )
+      } )
+    apparentSubjectName <- strsplit(files[i],split="_")[[1]][1]
+    subjectName<- rawDataLoad$participantID[[1]]
+    if (apparentSubjectName != subjectName) {
+      stop( paste0("WARNING apparentSubjectName",apparentSubjectName," from filename does not match subjectName in data structure",subjectName) )
+    }
+    else { cat(paste0(' Subject ',apparentSubjectName,' read in')) }
+    rawDataLoad$file <- files[i]
+
+    dfThis<- turnMATintoMeltedDataframe(rawDataLoad)
+
+    tryCatch(
+      dfAll<-rbind(dfAll,dfThis), #if fail to bind new with old,
+      error=function(e) { #Give feedback about how the error happened
+        cat(paste0("Tried to merge but error:",e) )
+      } )
+  }
+  return(dfAll)
+}
+```
+
+```{r read raw data}
+
+E<- readInAllFiles(rawDataPath)
+
+#Calculate the serial position error
+E$SPE<- E$respSP - E$targetSP
+
+```
+
+Why are there NaNs for targetSP? Because that's when only one target (targetSide==1 or ==2)
+
+```{r}
+table(E$subject, E$targetSP,useNA="always")
+```
+
+Show how targetSP works
+```{r}
+library(dplyr)
+En <- E
+En$letterSeq<- NULL #otherwise can't use dplyr
+CU <- En %>% filter(subject=="CU")
+table(CU$target,CU$targetSide, useNA="always")
+#targetSide ==0  means targets on both sides 
+table(CU$targetSide, CU$targetSP, useNA="always")
+```
+
+Why is it that letterSeq is still in with all its values, but allLetterOrientations etc only has one? As you can see below, you literally can't slice
+
+```{r}
+CUall <- E[ ,E$subject=="CU" ]
+i<- E$subject == "CU"
+E[i,] #doens't work. You can't slice a dataframe that has a list (letterSeq) as a member, yet no error message!
+subset(E, subject=="CU")
+j<- En$subject == "CU"
+EnCU<- En[j,]
+```
+
+Load in one file and inspect it
+```{r}
+
+source(file.path("turnMATintoMeltedDataframe.R"))
+
+fileThis<- file.path(rawDataPath, "CU_18-05-10_1.mat")
+
+rawDat=tryCatch(
+  readMat(fileThis),
+  error=function(e) {
+    stop( paste0("ERROR reading the file ",fileThis," :",e) )
+  } )
+str(rawDat)
+CUmelted<- turnMATintoMeltedDataframe(rawDat)
+
+```
+Somehow, what would seem to be the second trial has NaN for lots of stuff
+
+ $ allLetterOrder         : num [1:216, 1:2, 1:16] 13 6 9 1 10 16 11 1 12 8 ...
+ $ allLetterOrientations  : num [1:216, 1:16] 1 0 1 0 0 0 1 0 1 0 ...
+ $ allTargets             : num [1:216, 1:2] 5 NaN 6 8 7 7 6 6 6 8 ...
+ $ allTargetOrientations  : num [1:216, 1:2] 0 NaN 1 1 0 1 1 1 0 0 ...
+ $ allResponses           : num [1:216, 1:2] 9 NaN 1 3 5 11 5 3 8 11 ...
+ $ allResponseOrientations: num [1:216, 1:2] 0 NaN 0 0 0 1 0 0 0 0 ...
+ $ allResponseOrder       : num [1:216, 1] 2 2 1 2 2 1 2 1 1 1 ...
+ $ allRTs                 : num [1:216, 1:2] 12.78 NaN 1.81 6.19 10.19 ...
+
+
+Inspect another one 
+```{r}
+fileThis<- file.path(rawDataPath, "BC_18-01-25_1.mat")
+
+rawDat=tryCatch(
+  readMat(fileThis),
+  error=function(e) {
+    stop( paste0("ERROR reading the file ",fileThis," :",e) )
+  } )
+str(rawDat)
+
+```
+
+
+Sanity visual check that see histogram.
+```{r sanity visual check}
+
+sanityVisualCheck<-TRUE
+if (sanityVisualCheck) {
+  library(ggplot2)
+  g=ggplot(E, aes(x=SPE))
+  #plot data
+  g<-g+geom_histogram(binwidth=1)
+  show(g)
+  
+  h<-ggplot(E,aes(x=SPE)) + geom_histogram(binwidth=1)
+  show(h)
+}
+
+```
+
+Meaning of condition variable
+* 1 - upright
+* 2 - inverted
+
+Make condition names more sensible - stream (Left/Right) and orientation (Canonical/Inverted)
+```{r}
+E2<- E
+names(E2)[names(E2) == 'target'] <-'stream'
+names(E2)[names(E2) == 'condition'] <-'orientation'
+E2$stream[ E2$stream==1 ] <- "Left"
+E2$stream[ E2$stream==2 ] <- "Right"
+#mutate condition to Orientation
+E2$orientation[ E2$orientation==1 ] <- "Canonical"
+E2$orientation[ E2$orientation==2 ] <- "Inverted"
+
+```
+
+Save data
+```{r}
+#save dataframe into proper library data directory
+backwards2_E2<-E2
+saveRDS(backwards2_E2, file = "../Data/backwards2E2_rawDataFromMAT.rda", compress="bzip2")
+```
+
+Look at 1-target performance, understand that variable better because didn't exist in previous experiment I think.
+
+The first table printed below could easily fool you into thinking that stream (Left, Right) and targetSide (1,2) are not consistent. We think that's because it records something for both sides (stream variable) even when there is only 1 target (targetSide == 1 or 2 rather than 0, which means two targets).
+
+ALEX TO-DO
+Disaggregating and thus preserving the all variables, like allLetterOrientations and allTargetORientations
+Also maybe give targetSide values that make more common sense, like "dual", "left", and "right"
+
+But the second table below shows that they make sense, as they are only inconsistent when allResponseOrientations==NaN.  But what the hell are those trials where  allResponseOrientations==NaN?
+```{r}
+library(dplyr)
+E2$letterSeq <- NULL
+one <- E2 %>% filter(numTargets==1)
+
+table(one$stream,one$targetSide,useNA="always")
+
+table(E2$stream,E2$targetSide,E2$numTargets, useNA="always")
+
+
+table(one$stream,one$targetSide,one$orientation,useNA="always")
+
+table(one$stream,one$targetSide,one$allResponseOrientations,useNA="always")
+```
