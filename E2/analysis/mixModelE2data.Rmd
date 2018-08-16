@@ -22,27 +22,52 @@ data<- readRDS( file.path(dataPath, "backwards2E2_rawDataFromMAT.rda") )
 
 #tidy data
 library(dplyr)
-df<- data
-#to work with dplyr, can't have array field like letterSeq
-df$letterSeq<- NULL
+#to work with dplyr, can't have array field like letterSeq, so before I fixed it in turnMatIntoMeltedDataframe, 
+#I dropped the letterSeq thusly:
+#df$letterSeq<- NULL
 
-numItemsInStream<- length( data$letterSeq[1,] )  
+numItemsInStream<- length( data[1,"letterSeq"]$letterSeq$`1` )  
 minSPE<- -17; maxSPE<- 17
 
 ```
 
-Why are there NaNs for targetSP?
+Hm, seems like funky StackOverflow way of turning matrix elements into list gave it this weird name "1" with backticks around it  
+
+data[1,"letterSeq"]$letterSeq$`1`
+
+
+Make condition names more sensible - stream (Left/Right) and orientation (Canonical/Inverted)
 ```{r}
-table(is.nan(df$targetSP))
+E2<- data
+names(E2)[names(E2) == 'target'] <-'stream'
+names(E2)[names(E2) == 'condition'] <-'orientation'
+E2$stream[ E2$stream==1 ] <- "Left"
+E2$stream[ E2$stream==2 ] <- "Right"
+E2$targetSide[ E2$targetSide==0 ] <- "Both"
+E2$targetSide[ E2$targetSide==1 ] <- "Left"
+E2$targetSide[ E2$targetSide==2 ] <- "Right"
+
+#mutate condition to Orientation
+E2$orientation[ E2$orientation==1 ] <- "Canonical"
+E2$orientation[ E2$orientation==2 ] <- "Inverted"
 
 ```
+
+NaNs for targetSP indicate one-target trials, which are also indicated by targetSide==0
+```{r}
+
+table(E2$targetSP, E2$targetSide, dnn=c("targetSP","targetSide"), useNA="ifany")
+
+```
+Proportion of one-target trials seems to be `r table(is.nan(df$targetSP))["TRUE"] / sum( table(is.nan(df$targetSP)) )
+`
 
 Sanity-check some data by graphing.
 
 Investigate whether pathological identicalness of inverted/canonical happens, that happened in E1 . Seems it doesn't
 
 ```{r}
-dg<- df %>% filter(subject < "AC")
+dg<- E2 %>% filter(subject < "AC")
 
 library(ggplot2)
 g=ggplot(dg, aes(x=SPE)) + facet_grid(subject+orientation~stream) #,  scales="free_y")
@@ -52,24 +77,40 @@ show(g)
 ```
 
 Try to analyze one bit of data.
-WHY ARE THERE NANS IN TARGETSP?
 ```{r}
 library(mixRSVP)
-dg<-df %>% filter(subject=="AA")
-analyzeOneCondition(dg,numItemsInStream,parameterBounds(),nReplicates=5)
+dg<-E2 %>% filter(subject=="AA")
+dg<-dg %>% filter( !is.nan(targetSP) )
 
-analyzeOneConditionDF(df %>% filter(subject=="AA"),numItemsInStream,parameterBounds(),nReplicates=5)
+analyzeOneCondition(dg,numItemsInStream,parameterBounds(),nReplicates=2)
+
+analyzeOneConditionDF(dg,numItemsInStream,parameterBounds(),nReplicates=2)
 
 ```
 
-Fit mixture model with R (if fitting not previously done and cached). 
+Maybe do the one-target trials first, might be faster.
+```{r, echo=FALSE}
+one<- dg %>% filter(targetSide != "Both")
+
+condtnVariableNames <- c("subject","targetSide", "stream", "orientation")  
+#It seems there are no rows for one-target (targetSide!="Both") and stream!=targetSide,
+# which would mean that I can't test for stream swaps in the one-target condition
+
+estimates<- dg  %>%  #  filter(subject=="AA") %>%
+    group_by_(.dots = condtnVariableNames) %>%  #.dots needed when you have a variable containing multiple factor names
+    do(  analyzeOneConditionDF(.,numItemsInStream,parameterBounds(),nReplicates=5) )
+
+
+```
+
+
+Fit mixture model (if fitting not previously done and cached). 
 ```{r, echo=FALSE}
 
 library(mixRSVP)
 
 #Bizarrely, when knitting this often quits after only 6 parameter estimates. Don't know if there's some function fitting error catch problem
   
-condtnVariableNames <- c("subject","stream", "orientation")  
 
 estimates<- df  %>% filter(subject=="AA") %>%
     group_by_(.dots = condtnVariableNames) %>%  #.dots needed when you have a variable containing multiple factor names
