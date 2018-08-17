@@ -1,9 +1,10 @@
 ---
-title: "importE2data"
+title: "validateE2data"
 author: "Alex Holcombe"
 date: "2/27/2018"
 output: html_document
 ---
+Optional validation (don't need to run this), loads raw data on its own and validates a few things 
 
 1/3 of trials have 1 target (numTargets==1)
 targetSide ==0  means targets on both sides 
@@ -175,6 +176,20 @@ E2$stream[ E2$stream==2 ] <- "Right"
 E2$orientation[ E2$orientation==1 ] <- "Canonical"
 E2$orientation[ E2$orientation==2 ] <- "Inverted"
 
+```
+
+Sanity-check some data by graphing.
+
+Investigate whether pathological identicalness of inverted/canonical happens, that happened in E1 . Seems it doesn't
+
+```{r}
+dg<- E2 %>% filter(subject < "AC")
+
+library(ggplot2)
+g=ggplot(dg, aes(x=SPE)) + facet_grid(subject+orientation~stream) #,  scales="free_y")
+g<-g+geom_histogram(binwidth=1,color="grey90") + xlim(minSPE,maxSPE)
+g<-g+ geom_text(x=12, y= 33, aes(label = subject)) #inset subject name/number. Unfortunately it overwrites itself a million times
+show(g)
 ```
 
 Save data

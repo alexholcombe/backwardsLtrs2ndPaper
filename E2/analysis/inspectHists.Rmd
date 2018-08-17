@@ -68,8 +68,8 @@ CY is bimodal but not outrageously so.
 Subject AP looks to both have close to zero efficacy in some conditions and disregards instructions, reporting mostly after the cue.
 
 BJ has essentially zero efficacy and may have tended to report letters from beginning of stream in one condition.
-
+```{r }
 SsWhoLookWeird<-c("CY","AP","BJ")
-
+```
 We'll see whether the statistical comparison of mixture modeling to guessing distribution flags these as not being fit significantly better by mixture model. 
 

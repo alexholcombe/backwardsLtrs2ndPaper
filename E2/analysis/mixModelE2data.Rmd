@@ -55,9 +55,7 @@ E2$orientation[ E2$orientation==2 ] <- "Inverted"
 
 NaNs for targetSP indicate one-target trials, which are also indicated by targetSide==0
 ```{r}
-
 table(E2$targetSP, E2$targetSide, dnn=c("targetSP","targetSide"), useNA="ifany")
-
 ```
 Proportion of one-target trials seems to be 
 `nrow(E2 %>% filter(targetSide!="Both")) / nrow(E2)`
@@ -103,12 +101,12 @@ estimatesAA<- dg  %>%
 
 Fit mixture model (if fitting not previously done and cached). 
 ```{r, echo=FALSE}
-
+#devtools::install_github('alexholcombe/mixRSVP',build_vignettes=TRUE)
 library(mixRSVP)
 
 #Bizarrely, when knitting this often quits after only 6 parameter estimates. Don't know if there's some function fitting error catch problem
   
-estimates<- df  %>%  filter( !is.nan(targetSP) ) %>%
+estimates<- E2  %>%  filter( !is.nan(targetSP) ) %>% filter(subject>"AF") %>%
     group_by_(.dots = condtnVariableNames) %>%  #.dots needed when you have a variable containing multiple factor names
     do(  analyzeOneConditionDF(.,numItemsInStream,parameterBounds(),nReplicates=5) )
 
@@ -117,10 +115,12 @@ head(estimates)
 ```
 
 Save the param estimates to a file.
-```{Save param estimates, echo=FALSE}
+```{r SaveParamEstimates, echo=FALSE}
 
-write.csv(estimates, file = "Results/backwards2E2_paramEstimates.csv")
-#saveRDS(estimates, file = "Data/backwards2E1_paramEstimates.rda", compress="bzip2")
+resultsPath<- file.path("Results")
+
+write.csv(estimates, file = file.path(resultsPath, "backwards2E2_paramEstimates.csv"))
+#saveRDS(estimates, file = file.path(resultsPath, "Results/backwards2E1_paramEstimates.rda"), compress="bzip2")
 
 ```
 Done.
