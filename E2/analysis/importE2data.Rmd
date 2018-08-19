@@ -126,6 +126,22 @@ for (i in 1:nrow(E)) {
 # }
 ```
 
+Rename some columns
+```{r }
+E<- data
+names(E)[names(E) == 'target'] <-'stream'
+names(E)[names(E) == 'condition'] <-'orientation'
+E$stream[ E$stream==1 ] <- "Left"
+E$stream[ E$stream==2 ] <- "Right"
+E$targetSide[ E$targetSide==0 ] <- "Both"
+E$targetSide[ E$targetSide==1 ] <- "Left"
+E$targetSide[ E$targetSide==2 ] <- "Right"
+
+#mutate condition to Orientation
+E$orientation[ E$orientation==1 ] <- "Canonical"
+E$orientation[ E$orientation==2 ] <- "Inverted"
+```
+
 Saving data.
 ```{r saveData}
 backwards2_E2 <- E

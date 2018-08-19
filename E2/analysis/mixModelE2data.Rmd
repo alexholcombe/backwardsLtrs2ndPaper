@@ -27,7 +27,7 @@ library(dplyr)
 #df$letterSeq<- NULL
 
 numItemsInStream<- length( data[1,"letterSeq"]$letterSeq$`1` )  
-minSPE<- -17; maxSPE<- 17
+minSPE<- -17; maxSPE<- 17  #But it's 16 items in stream, so shouldn't it be -15, +15?
 
 ```
 
@@ -77,6 +77,7 @@ show(g)
 
 Try to analyze one bit of data.
 ```{r}
+#devtools::install_github('alexholcombe/mixRSVP',build_vignettes=TRUE)
 library(mixRSVP)
 dg<-E2 %>% filter(subject=="AA")
 dg<-dg %>% filter( !is.nan(targetSP) ) #excluding 1-target trials rows reporting stream on opposite side. Eventually, use those to evaluate swaps.
@@ -106,12 +107,21 @@ library(mixRSVP)
 
 #Bizarrely, when knitting this often quits after only 6 parameter estimates. Don't know if there's some function fitting error catch problem
   
-estimates<- E2  %>%  filter( !is.nan(targetSP) ) %>% filter(subject>"AF") %>%
-    group_by_(.dots = condtnVariableNames) %>%  #.dots needed when you have a variable containing multiple factor names
+estimates<- E2  %>%  filter( !is.na(targetSP) ) %>%
+    group_by_at(.vars = condtnVariableNames) %>%  
     do(  analyzeOneConditionDF(.,numItemsInStream,parameterBounds(),nReplicates=5) )
 
 
 head(estimates)
+```
+
+Calc numObservations for each condition
+```{r }
+#Calc numObservations for each condition. This is needed  for scaling the fine-grained Gaussian
+#gaussianScaledforData needs to know.
+dfGroups<-  E2  %>%  filter( !is.na(targetSP) ) %>% group_by_at(.vars = condtnVariableNames) %>% summarise(nPerCond = n())
+#add nPerCond back to parameter estimates
+estimates<- merge(estimates,dfGroups)
 ```
 
 Save the param estimates to a file.
