@@ -1,0 +1,42 @@
+---
+title: "inspect histograms"
+author: "Alex Holcombe"
+date: "2/26/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Optional validation (don't need to run this), loads raw data on its own and validates a few things 
+
+```{r validate data, echo=FALSE, message=FALSE}
+source('validateE2data.Rmd')
+```
+
+Load data
+
+```{r load data, echo=FALSE, message=FALSE}
+source('importE2data.Rmd')
+```
+
+inspect Hists for weird data, non-performing Ss
+
+```{r inspectHists}
+
+source('inspectHists.Rmd')
+```
+
+Mixture model data
+
+```{r}
+source('mixModelE2data.Rmd')
+```
+
+Plot hists with psychophysical curves added,
+check that and likelihood ratio test for whether to exclude, 
+and infer
+```{r}
+source('inspectHistsWithFits.Rmd')
+```
