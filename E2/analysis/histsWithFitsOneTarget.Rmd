@@ -1,0 +1,297 @@
+---
+title: "one target"
+author: "Alex Holcombe"
+date: "2/26/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(dplyr)
+
+```
+
+Load data and estimates
+
+```{r load data, echo=FALSE, message=FALSE}
+
+#Import raw data
+dataPath<- file.path("../Data/")
+#Experiment was administered by MATLAB
+#.mat file been preprocessed into melted long dataframe by importE1data.Rmd
+data<- readRDS( file.path(dataPath, "backwards2E2_rawDataFromMAT.rda") ) 
+
+resultsPath<- file.path("Results")
+estimates<- read.csv(file = file.path(resultsPath,"/backwards2E2_paramEstimates.csv"))
+
+```
+
+Fix the variable names if not done
+
+```{r, echo=FALSE, message=FALSE}
+#Below should now be done by import
+if ('target' %in% names(data)) {
+  names(data)[names(data) == 'target'] <-'stream'
+  names(data)[names(data) == 'condition'] <-'orientation'
+  data$stream[ data$stream==1 ] <- "Left"
+  data$stream[ data$stream==2 ] <- "Right"
+}
+if (is.numeric(data$targetSide)) {
+  data$targetSide[ data$targetSide==0 ] <- "Both"
+  data$targetSide[ data$targetSide==1 ] <- "Left"
+  data$targetSide[ data$targetSide==2 ] <- "Right"
+}
+if (is.numeric(data$orientation)) {
+  #mutate condition to Orientation
+  data$orientation[ data$orientation==1 ] <- "Canonical"
+  data$orientation[ data$orientation==2 ] <- "Inverted"
+}
+```
+
+Add the parameter estimates to the tibble
+
+```{r, echo=FALSE, message=FALSE, fig.height=360, fig.width=10}
+#want fig.height of 10 per subject
+
+condtnVariableNames <- c("subject","stream", "orientation","targetSide")  
+
+#Add R parameter estimates to data tibble
+#To merge them, unfortunately have to convert to dataframe first because dplyr has no binding of tibbles.
+# https://stackoverflow.com/questions/45643886/how-to-combine-tibbles-with-common-but-non-identical-columns#45644319
+#Not sure what is lost as a result.
+dd<- as_data_frame(data)
+es<- as_data_frame(estimates)
+#Looks like each subject has only 8 efficacy values somehow, it's because there was an extra
+#variable, X
+es$X <- NULL
+dat<- merge(dd,es)
+dg<-dat %>% filter( !is.na(targetSP) ) #excluding 1-target trials rows reporting stream on opposite side. Eventually, use those to evaluate swaps.
+```
+
+Set up the experiment-specific parameters 
+
+```{r detailsNeeded}
+
+numItemsInStream<- length( dg$letterSeq[[1]] )  
+minSPE<- -17; maxSPE<- 17
+annotateIt<-TRUE
+
+numSs<-length(unique(dg$subject))
+cat( paste0('Total num Ss=',numSs) )
+```
+
+Calc numObservations for each condition
+```{r }
+#Calc numObservations for each condition. This is needed  for scaling the fine-grained Gaussian
+#gaussianScaledforData needs to know.
+if (!("nPerCond" %in% colnames(dg))) {
+  dfGroups<-  dg  %>%  filter( !is.na(targetSP) ) %>% group_by_at(.vars = condtnVariableNames) %>% summarise(nPerCond = n())
+  #add nPerCond back to parameter estimates
+  estimates<- merge(estimates,dfGroups)
+}
+```
+
+
+Calculate curves for parameters, to plot on histograms.
+```{r, echo=TRUE, message=FALSE, fig.height=360, fig.width=10}
+#devtools::install_github('alexholcombe/mixRSVP',build_vignettes=TRUE)
+library(mixRSVP)
+oneTarget<- dg %>% filter(targetSide!="Both")
+curvesOneTarget<- dg %>% filter(targetSide!="Both") %>%
+  group_by_at(.vars = condtnVariableNames) %>% 
+  do(calc_curves_dataframe(.,minSPE,maxSPE,numItemsInStream))
+#fails with on-missing arguments to min; returning Inf no non-missing arguments to max; returning -Inf 
+#Error in createGuessingDistribution(minSPE, maxSPE, df$targetSP, numItemsInStream) :  minSPE must be less than or equal to maxSPE
+
+#DEBUG
+# dd<- dg %>% filter(subject=="AA", stream=="Left",targetSide=="Both",orientation=="Canonical")
+# 
+# createGuessingDistribution(minSPE,maxSPE,dd$targetSP,numItemsInStream)
+# targetSP<- dd$targetSP
+# maxTargetSP <- max(targetSP)
+# minSPEthisData<- 1 - max(targetSP)
+# maxSPEthisData<- numItemsInStream - min(targetSP)
+# if (maxSPEthisData > maxSPE) stop("maxSPE must be at least",maxSPEthisData,"based on the values you passed me")
+# if (minSPEthisData < minSPE) stop("minSPE must be no greater than",minSPEthisData,"based on the values you passed me")
+# calc_curves_dataframe(dd,minSPE,maxSPE,numItemsInStream)
+
+
+```
+
+
+```{r }
+# #Calc numObservations to each condition. This is needed only for scaling the fine-grained Gaussian
+# #Calc the number of observations for each condition, because gaussianScaledforData needs to know.
+# dfGroups<- dg %>% group_by_at(.vars = condtnVariableNames) %>% summarise(nPerCond = n())
+# #add nPerCond back to parameter estimates
+# estimates<- merge(estimates,dfGroups)
+
+grain<-.05
+gaussFine<- estimates %>%  filter(targetSide!="Both") %>% group_by_at(.vars = condtnVariableNames) %>% do(
+  gaussian_scaled_from_df(.,minSPE,maxSPE,grain) )
+```
+
+
+Plot sample histograms, make sure plotting working.
+
+```{r singleHistPlot}
+library(ggplot2)
+
+dAC<- dplyr::filter(oneTarget,subject=="AC")  
+plotContinuousGaussian<- TRUE 
+annotateIt<-TRUE
+g<- plot_hist_with_fit(dAC,minSPE,maxSPE,d915$targetSP,numItemsInStream,
+                        plotContinuousGaussian,annotateIt, FALSE)
+g <- g + geom_vline(xintercept = 0)
+g + annotate("text", x = 12, y = 25, label = "AC")
+```
+
+Show single plot with curves using scalable method to facet_grid.
+In other words, make sure can plot without plot_hist_with_fit
+
+```{r singleHistPlotScalable, echo=FALSE}
+
+dAC<- dplyr::filter(oneTarget,subject=="AC")  
+curvesThis <- curvesOneTarget %>% filter(subject=="AC") 
+
+g=ggplot(dAC, aes(x=SPE)) + 
+        facet_grid(orientation~stream) #,  scales="free_y")
+g<-g+geom_histogram(binwidth=1,color="grey90") + xlim(minSPE,maxSPE)
+g<-g+ geom_text(x=12, y= 33, aes(label = subject)) #inset subject name/number. Unfortunately it overwrites itself a million times
+g<-g +theme_apa() #+theme(panel.grid.minor=element_blank(),panel.grid.major=element_blank())# hide all gridlines.
+g<-g +xlim(minSPE,maxSPE)
+sz=.3
+#show(g)
+g<-g+ geom_point(data=curvesThis,aes(x=x,y=combinedFitFreq),color="chartreuse3",size=sz)
+
+#g<-g+ geom_line(data=curves,aes(x=x,y=guessingFreq),color="yellow",size=sz)
+#Discretized Gaussian
+#g<-g+ geom_line(data=curves,aes(x=x,y=gaussianFreq),color="lightblue",size=sz)
+
+#mixSig - whether mixture model statistically significantly better than guessing
+curvesThis <- dplyr::mutate(curvesThis, mixSig = ifelse(pLRtest <= .05, TRUE, FALSE)) #annotate_fit uses this to color the p-value
+g<- annotate_fit(g,curvesThis) #assumes curvesDf includes efficacy,latency,precision
+#Somehow the which mixSig (TRUE or FALSE) is red and which green is flipped relative to plot_hist_with_fit even though
+#identical commands are used. I haven't been able to work out why.
+#g<- g + scale_color_manual(values=c("red","forestgreen")) #already done in annotate_fit
+show(g)
+```
+
+
+Plot all Ss
+```{r, fig.height=200, fig.width=10}
+
+g=ggplot(oneTarget, aes(x=SPE)) + 
+        facet_grid(subject+orientation~stream) #,  scales="free_y")
+g<-g+geom_histogram(binwidth=1,color="grey90") + xlim(minSPE,maxSPE)
+g<-g+ geom_text(x=12, y= 33, aes(label = subject)) #inset subject name/number. Unfortunately it overwrites itself a million times
+g<-g +theme_apa() #+theme(panel.grid.minor=element_blank(),panel.grid.major=element_blank())# hide all gridlines.
+g<-g +xlim(minSPE,maxSPE)
+sz=.3
+#show(g)
+g<-g+ geom_point(data=curvesOneTarget,aes(x=x,y=combinedFitFreq),color="chartreuse3",size=sz)
+#g<-g+ geom_line(data=curves,aes(x=x,y=guessingFreq),color="yellow",size=sz)
+#Discretized Gaussian
+#g<-g+ geom_line(data=curves,aes(x=x,y=gaussianFreq),color="lightblue",size=sz)
+
+#mixSig - whether mixture model statistically significantly better than guessing
+curvesOneTarget <- dplyr::mutate(curvesOneTarget, mixSig = ifelse(pLRtest <= .05, TRUE, FALSE)) #annotate_fit uses this to color the p-value
+g<- annotate_fit(g,curvesOneTarget) #assumes curvesDf includes efficacy,latency,precision
+#Somehow the which mixSig (TRUE or FALSE) is red and which green is flipped relative to plot_hist_with_fit even though
+#identical commands are used. I haven't been able to work out why.
+#g<- g + scale_color_manual(values=c("red","forestgreen")) #already done in annotate_fit
+show(g)
+
+```
+
+```{r investigateDifficultyCollapsing}
+#see preservingNonNumericWhenSummarizing.R
+tw<- as_tibble(twoTarget)
+tw<- tw %>% select(-targetStreamOrientations,-warnings,-letterSeq)
+ty<- tw %>% group_by(subject,stream,orientation) %>% summarise_all(funs(if_else(is.numeric(.), mean(.), first(.))))
+
+tt<- as_tibble(twoTarget) 
+zb<- tt %>% group_by(subject,stream,orientation) %>% select(-targetStreamOrientations,-letterSeq) %>%
+  summarise_all( function(x){ if(is.numeric(x)){ return(mean(x)) } else{ nth(x,-1) } })
+
+#The below works, but remember I've eliminated the list and string columns
+#zz<- tw %>% group_by(subject,stream,orientation) %>%
+#  summarise_all(function(x){ifelse(is.numeric(x),mean(x),last(x))}) 
+
+tt<- as_tibble(twoTarget)
+za<- tt %>% group_by(subject,stream,orientation) %>%
+  summarise_all(function(x){ifelse(is.numeric(x),mean(x),last(x))}) 
+
+
+tz<-tw
+tz$targetSide <- as.factor(tz$targetSide)
+tz %>% group_by(subject,stream,orientation) %>% summarise_all(funs(if_else(is.numeric(.), mean(.), first(.))))
+
+
+tw %>% group_by(subject,stream,orientation) %>% summarise_at("targetSide",first)
+
+ty<- tw %>% group_by(subject,stream,orientation) %>% summarise_all(funs(if_else(is.numeric(.), mean(.), -999.9)))
+```
+
+BE has e=.47 on left, .62 on right
+BJ is just near chance and fails likelihood ratio test for 1-target, like did for 2-targets.
+BO did badly for canonical on left, but passed lr test.
+CF did badly for inverted on left, but passed lr test.
+CL did pretty badly but got lucky, passed.
+AP flunked one of the lr tests which is good because flunked some in two-target too.
+So, lr test seems to be working well enough.
+
+## Exclusions
+
+Exclude by likelihood ratio test and efficacy.
+
+For each subject, calculate how many two-target streams they failed. If 3 or 4 of 4, exclude (didn't think to mention 1-target condition in prereg).
+
+Also check whether average efficacy is below 10% in both streams in either the upright or the reversed orientation.
+
+```{r exclusions}
+
+twoTarget<- dg %>% filter(targetSide=="Both")
+
+AA<- twoTarget %>% filter(subject=="AA")
+#Function for one subject, calculating how many stream conditions failed the test
+calcExclude<- function(oneSub) {
+  oneSub %>% group_by(stream,orientation)
+}
+#first, collapse over trials
+#https://stackoverflow.com/questions/51978519/summarise-numeric-columns-return-last-value-of-non-numeric
+tw<- twoTarget %>% group_by(subject,stream,orientation) %>% select(-targetStreamOrientations,-letterSeq) %>% #can't include list columns
+  summarise_all( function(x){ if(is.numeric(x)){ return(mean(x)) } else{ nth(x,-1) } })
+
+#for each subject, count pLRtest instances >.05 and efficay <.1
+B<-tw %>% ungroup %>% group_by(subject) %>% summarise(LRtestFails = sum(pLRtest>.05), effFails = sum(efficacy<.1))                                                              
+#B %>% print(n=Inf)
+exclude <- B %>% filter(LRtestFails>=3, effFails > 
+
+# efficacy is below 10% in both streams in either the upright or the reversed orientation.
+# To calculate that, need to group by subject and orientation
+C<-tw %>% ungroup %>% group_by(subject,orientation) %>% summarise(bothEffsFailed = sum(efficacy<.1)==2)
+#Find which subjects, if any, has a bothEffsFailed==TRUE
+lowEff<- C %>% filter(bothEffsFailed==TRUE)
+lowEff <- unique(lowEff$subject)
+                      
+A<- tw %>% filter(subject=="AA")
+B<-A %>% ungroup %>% summarise(LRtestFails = sum(pLRtest<.05), effFails = sum(efficacy<.1))                                                                                                  
+
+
+twoTarget %>% select(-targetStreamOrientations,-warnings,-letterSeq) %>% group_by(stream,orientation) %>% summarise_all(funs(if_else(is.numeric(.), mean(.), 3))
+       
+                                                                                                                                                                                                               
+two<- twoTarget %>% group_by(stream,orientation) %>% summarise_all(funs(if_else(!is.list(.), mean(.), last(.))))
+
+  
+  summarise_all(funs(mean,sd))
+A <- two %>% filter(subject=="AA")
+  
+curvesOneTarget<- twoTarget %>%
+  group_by(subject) %>% 
+  do(calc_curves_dataframe(.,minSPE,maxSPE,numItemsInStream))
+
+```
+
+Participant AI, BB suspicion of  attending to one side from twoTargets condition.
