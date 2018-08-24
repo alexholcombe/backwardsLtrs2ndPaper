@@ -204,34 +204,6 @@ show(g)
 
 ```
 
-```{r investigateDifficultyCollapsing}
-#see preservingNonNumericWhenSummarizing.R
-tw<- as_tibble(twoTarget)
-tw<- tw %>% select(-targetStreamOrientations,-warnings,-letterSeq)
-ty<- tw %>% group_by(subject,stream,orientation) %>% summarise_all(funs(if_else(is.numeric(.), mean(.), first(.))))
-
-tt<- as_tibble(twoTarget) 
-zb<- tt %>% group_by(subject,stream,orientation) %>% select(-targetStreamOrientations,-letterSeq) %>%
-  summarise_all( function(x){ if(is.numeric(x)){ return(mean(x)) } else{ nth(x,-1) } })
-
-#The below works, but remember I've eliminated the list and string columns
-#zz<- tw %>% group_by(subject,stream,orientation) %>%
-#  summarise_all(function(x){ifelse(is.numeric(x),mean(x),last(x))}) 
-
-tt<- as_tibble(twoTarget)
-za<- tt %>% group_by(subject,stream,orientation) %>%
-  summarise_all(function(x){ifelse(is.numeric(x),mean(x),last(x))}) 
-
-
-tz<-tw
-tz$targetSide <- as.factor(tz$targetSide)
-tz %>% group_by(subject,stream,orientation) %>% summarise_all(funs(if_else(is.numeric(.), mean(.), first(.))))
-
-
-tw %>% group_by(subject,stream,orientation) %>% summarise_at("targetSide",first)
-
-ty<- tw %>% group_by(subject,stream,orientation) %>% summarise_all(funs(if_else(is.numeric(.), mean(.), -999.9)))
-```
 
 BE has e=.47 on left, .62 on right
 BJ is just near chance and fails likelihood ratio test for 1-target, like did for 2-targets.
@@ -271,7 +243,10 @@ lowEff<- C %>% filter(bothEffsFailed==TRUE)
 lowEffs <- unique(lowEff$subject)
 ```
 
-I suppose there are 4 one-target conditions also, upright/reversed x left/right
+There are 4 one-target conditions also, upright/reversed x left/right.
+Will exclude subject if failed likelihood test for both left and right in either condition.
+
+Will also exclude if difference in efficacy left-right exceeds?
 ```{r }
 #Calculate exclusions based on one-target performance
 #oneTarget<- dg %>% filter(targetSide!="Both")
@@ -280,17 +255,42 @@ one<- oneTarget %>% group_by(subject,targetSide,orientation) %>%
   select(-trial,-targetSP,-respSP,-respOrder) %>% #clear detritus so easier to see
   summarise_all( function(x){ if(is.numeric(x)){ return(mean(x)) } else{ nth(x,-1) } })
 
-#Should probably look at the difference in efficacy between the left and the right
-one %>% group_by(subject,targetSide) %>%   function(x) { x$effDiff = x %>% filter(stream=="Left")   -    x %>% filter(stream=="Right") }  
+#Look at the difference in efficacy between the left and the right
+effDiff <- function(df) {
+  #dgi<<-df
+  #STOP
+  effLeft<- (df %>% filter(targetSide=="Left"))$efficacy 
+  effRight<- (df %>% filter(targetSide=="Right"))$efficacy
+  df$effDiff<- effLeft - effRight
+  df$efficacy<- mean(c(effLeft,effRight))
+  df$effDiff<- effLeft - effRight
   
-
-one %>% group_by(subject,targetSide) %>% summarise_at("efficacy",
-       function(x) { x %>% filter(stream=="Left")   -    x %>% filter(stream=="Right") }  )
+  failedBothLR <- ((df %>% filter(targetSide=="Left"))$pLRtest >= .05) &
+    ((df %>% filter(targetSide=="Right"))$pLRtest >= .05)
+  df$failedBothLR <- failedBothLR
   
-  mutate(effDiff = 
-       function(x) { x %>% filter(stream=="Left")$efficacy   -    x %>% filter(stream=="Right")$efficacy }  )
+  return(df[1,]) #return first row, so it does get collapsed
+}
 
-  summarise(LRtestFails = sum(pLRtest>.05), effFails = sum(efficacy<.1))    
+oneDiff<- one %>% group_by(subject,orientation) %>% do( effDiff(.) )
+oneDiff<- oneDiff %>% select(subject,targetSide,orientation,efficacy,effDiff,pLRtest,failedBothLR)
+oneDiff
+
+oneTargetLosers <- oneDiff %>% filter(failedBothLR == TRUE, effDiff > .4)
+
+```
+
+Make scatterplot of efficacy for left vs. right single target
+
+```{r}
+#To do that, do I need to unmelt?
+ggplot(one, aes(x=
+```
+
+
+Make scatterplot of efficacy difference between left and right single target on horizontal axis and dual-target difference on vertical axis.
+
+```{r}
 
 ```
 
