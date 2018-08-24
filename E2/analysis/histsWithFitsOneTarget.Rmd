@@ -253,11 +253,6 @@ Also check whether average efficacy is below 10% in both streams in either the u
 
 twoTarget<- dg %>% filter(targetSide=="Both")
 
-AA<- twoTarget %>% filter(subject=="AA")
-#Function for one subject, calculating how many stream conditions failed the test
-calcExclude<- function(oneSub) {
-  oneSub %>% group_by(stream,orientation)
-}
 #first, collapse over trials
 #https://stackoverflow.com/questions/51978519/summarise-numeric-columns-return-last-value-of-non-numeric
 tw<- twoTarget %>% group_by(subject,stream,orientation) %>% select(-targetStreamOrientations,-letterSeq) %>% #can't include list columns
@@ -266,14 +261,47 @@ tw<- twoTarget %>% group_by(subject,stream,orientation) %>% select(-targetStream
 #for each subject, count pLRtest instances >.05 and efficay <.1
 B<-tw %>% ungroup %>% group_by(subject) %>% summarise(LRtestFails = sum(pLRtest>.05), effFails = sum(efficacy<.1))                                                              
 #B %>% print(n=Inf)
-exclude <- B %>% filter(LRtestFails>=3, effFails > 
-
+LRtestLosers <- B %>% filter(LRtestFails>=3)
+LRtestLosers<- unique(LRtestLosers$subject)
 # efficacy is below 10% in both streams in either the upright or the reversed orientation.
 # To calculate that, need to group by subject and orientation
 C<-tw %>% ungroup %>% group_by(subject,orientation) %>% summarise(bothEffsFailed = sum(efficacy<.1)==2)
 #Find which subjects, if any, has a bothEffsFailed==TRUE
 lowEff<- C %>% filter(bothEffsFailed==TRUE)
-lowEff <- unique(lowEff$subject)
+lowEffs <- unique(lowEff$subject)
+```
+
+I suppose there are 4 one-target conditions also, upright/reversed x left/right
+```{r }
+#Calculate exclusions based on one-target performance
+#oneTarget<- dg %>% filter(targetSide!="Both")
+one<- oneTarget %>% group_by(subject,targetSide,orientation) %>% 
+  select(-targetStreamOrientations,-letterSeq) %>% #can't include list columns
+  select(-trial,-targetSP,-respSP,-respOrder) %>% #clear detritus so easier to see
+  summarise_all( function(x){ if(is.numeric(x)){ return(mean(x)) } else{ nth(x,-1) } })
+
+#Should probably look at the difference in efficacy between the left and the right
+one %>% group_by(subject,targetSide) %>%   function(x) { x$effDiff = x %>% filter(stream=="Left")   -    x %>% filter(stream=="Right") }  
+  
+
+one %>% group_by(subject,targetSide) %>% summarise_at("efficacy",
+       function(x) { x %>% filter(stream=="Left")   -    x %>% filter(stream=="Right") }  )
+  
+  mutate(effDiff = 
+       function(x) { x %>% filter(stream=="Left")$efficacy   -    x %>% filter(stream=="Right")$efficacy }  )
+
+  summarise(LRtestFails = sum(pLRtest>.05), effFails = sum(efficacy<.1))    
+
+```
+
+Make master list of Ss to exclude also from one-target condition??
+
+Actually exclude the losers
+```{r exclude, echo=FALSE}
+
+afterExclusions<- tw %>% filter(  !(subject %in% lowEffs)   )
+
+```
                       
 A<- tw %>% filter(subject=="AA")
 B<-A %>% ungroup %>% summarise(LRtestFails = sum(pLRtest<.05), effFails = sum(efficacy<.1))                                                                                                  
