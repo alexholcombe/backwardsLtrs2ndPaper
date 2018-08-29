@@ -1,0 +1,38 @@
+---
+title: "Chapter1"
+author: "Alex Holcombe"
+date: "8/28/2018"
+output: html_document
+---
+
+Optional validation (don't have to run this to go to next step), loads raw data on its own and validates a few things 
+
+1/3 of trials have 1 target (numTargets==1)
+targetSide ==0  means targets on both sides 
+
+Checking some stuff out
+
+```{r set up functions}
+
+#Loads raw data from MATLAB files for second backwards paper second experiment
+require(R.matlab)
+
+mainPath<-".." # to main E2 folder
+
+#Second experiment of second backwards-letters paper. random orientation each frame.
+rawDataPath<- file.path(mainPath,
+                            "Data/RawData/Data")
+#raw data path containing .mat file for each subject
+
+source(file.path("turnMATintoMeltedDataframe.R"))
+cat("Here are the files in the raw data directory")
+dir(rawDataPath)
+```
+
+# Chapter 1
+
+This is chapter 1.
+
+```{r}
+1
+```

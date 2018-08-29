@@ -1,0 +1,198 @@
+---
+title: "InferentialStats"
+author: "Alex Holcombe"
+date: "2/27/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Read in parameter estimates
+
+```{r}
+dataPath <- file.path( "..","Data")
+#Created by exclusions.Rmd
+data<- readRDS( file.path(dataPath, "backwards2E2_dataWithEstimatesAndExcludeColumn.rda") ) 
+data<- as_tibble(data)
+```
+
+Why is there no targetSP==NA in data? That's the rows reporting stream on opposite side. Eventually, use those to evaluate swaps. I don't know what happened to it, because it's created in 
+exclusions.Rmd, which on line 67 creates the thing merged with estimates that is saved. 
+filter( !is.na(targetSP) )
+
+
+For inferential stats, don't care about individual trials, so extract parameter estimates from full tibble.
+
+```{r}
+
+estimates<- data %>% select(-targetStreamOrientations,-letterSeq) %>% #can't include list columns
+  group_by(subject,targetSide,orientation,stream) %>% #in other words, average over trials 
+  summarise_all( function(x){ if(is.numeric(x)){ return(mean(x)) } else{ nth(x,-1) } })
+
+library(readr)
+resultsPath = "Results/"
+write_tsv(estimates, file.path(resultsPath,"backwards2E2_paramEstimatesWithExcludeColumn.tsv"))
+
+```
+
+Plot data
+
+```{r, echo=FALSE, message=FALSE}
+require(ggplot2)
+gg<-ggplot(estimates %>% filter(targetSide=="Both"), 
+           aes(x=stream, y=efficacy, color=orientation)) + geom_point() + stat_summary(fun.y="mean",geom="point",size=8, alpha=.5) + theme_apa() +ggtitle('nobody excluded')
+show(gg)
+
+hh<-ggplot(estimates %>% filter(targetSide=="Both", exclude==FALSE), aes(x=stream, y=efficacy, color=orientation)) + 
+  geom_point(position = position_dodge(width = 0.3)) + stat_summary(fun.y="mean",geom="point",size=4, alpha=.5, position = position_dodge(width = 0.3)) + 
+  theme_apa() +ggtitle('after exclusions') + 
+  stat_summary(fun.data = mean_cl_boot, geom="errorbar", width=0.4, position = position_dodge(width = 0.3))
+
+show(hh)
+
+```
+
+Graph the latency and sigma as well
+BG, BJ, and AP have sigma near 4, clear outliers.
+
+```{r, echo=FALSE, message=FALSE}
+require(ggplot2)
+
+hh<-ggplot(estimates %>% filter(targetSide=="Both", exclude==FALSE), aes(x=stream, y=latency, color=orientation)) + 
+  geom_point(position = position_dodge(width = 0.3)) +  stat_summary(fun.y="mean",geom="point",size=4, alpha=.5, position = position_dodge(width = 0.3)) + 
+  theme_apa() +ggtitle('after exclusions') + 
+  stat_summary(fun.data =mean_cl_boot, geom="errorbar", width=0.4, position = position_dodge(width = 0.3))
+show(hh)
+
+ii<-ggplot(estimates %>% filter(targetSide=="Both", exclude==FALSE), aes(x=stream, y=precision, color=orientation)) + 
+  geom_point(position = position_dodge(width = 0.3)) +  stat_summary(fun.y="mean",geom="point",size=4, alpha=.5, position = position_dodge(width = 0.3)) + 
+  theme_apa() +ggtitle('after exclusions') + 
+  stat_summary(fun.data =mean_cl_boot, geom="errorbar", width=0.4, position = position_dodge(width = 0.3))
+show(ii)
+
+```
+
+
+Convert from long to wide so that both left and right stream estimates are in the same row, while going from wide to long for efficacy,latency,precision so can use facet_grid with them.
+
+```{r, echo=FALSE, message=FALSE}
+
+library(data.table)
+#The below works but drops many variables, so think about merging later
+#I guess what comes after the "~" is what goes from long to wide
+eff<- data.table::dcast(estimates, orientation+subject+exclude+targetSide~stream,
+                        value.var="efficacy")
+eff$dv<-"efficacy"
+lat<-data.table::dcast(estimates, orientation+subject+exclude+targetSide~stream,
+                       value.var="latency") 
+lat$dv<-"latency"
+pre<-data.table::dcast(estimates, orientation+subject+exclude+targetSide~stream,
+                       value.var="precision") 
+pre$dv<-"precision"
+all<-rbind(eff,lat,pre)
+#I tried to do the above with a single command but makes an error even though StackOverflow example works
+#https://stackoverflow.com/questions/37332076/from-long-to-wide-data-with-multiple-columns/37332345
+# data.table::dcast(estimates, orientation+subject+nPassed~stream,value.var=c("efficacy","latency"))
+head(all)
+```
+
+Calculate and plot bias. 
+```{r , fig.height=20, fig.width=5}
+all$leftBias<- all$Left - all$Right
+hh<-ggplot(all %>% filter(targetSide=="Both"), 
+           aes(x=orientation, y=leftBias)) + facet_grid(dv~., scales="free") +
+    stat_summary(fun.y="mean",geom="point",size=4, alpha=.5) + geom_point() +
+  stat_summary(fun.data = mean_cl_boot, geom="errorbar", width=0.2) + theme_apa() +
+  
+show(hh)
+```
+
+Print effect size
+```{r}
+leftBiasesCanonical<- filter(all,dv=="efficacy" & orientation=="Canonical")$leftBias
+leftBiasCanonical <- mean( leftBiasesCanonical )
+leftBiasesInverted<- filter(all,dv=="efficacy" & orientation=="Inverted")$leftBias
+leftBiasInverted<- mean(   leftBiasesInverted  )
+leftBiasDiff<- leftBiasCanonical - leftBiasInverted
+leftBias_sd <- sd(   leftBiasesCanonical - leftBiasesInverted )
+```
+
+The leftBiasDiff for this experiment is `r leftBiasDiff` or in Cohen's d `leftBiasDiff / leftBias_sd`, very healthy.
+
+
+```{r, echo=FALSE}
+E1n<- 16
+#Raw effect size plus standard error and sd
+P1E1canonical=.23;  P1E1c_se = .058; P1E1c_sd = P1E1c_se * sqrt(E1n)
+P1E1reversed= .062;  P1E1r_se = .07; P1E1r_sd = P1E1r_se * sqrt(E1n)
+#To calculate sd of the bias diff, consider that the variances sum,
+#therefore first sum the variances then convert back to standard deviation
+#Although only true for *independent* random variables and these unlikely to be totally independent
+P1E1diff_sdCalculated = sqrt( (P1E1c_sd^2 + P1E1r_sd^2) )  #.257
+
+E2n<- 24
+P1E2canonical=.218; P1E2c_se =.034; P1E2c_sd= P1E2c_se * sqrt(E2n)
+P1E2inverted=.017; P1E2i_se =.049; P1E2i_sd = P1E2i_se * sqrt(E2n)
+P1E2diff_sdCalculated = sqrt( (P1E2c_sd^2 + P1E2i_sd^2) ) #.2066
+
+P1E2vertUpright=.188; P1E2vu_se=.043; P1E2vu_sd = P1E2vu_se * sqrt(E2n)
+P1E2vertInverted= -.07; P1E2vi_se=.049; P1E2vi_sd = P1E2vi_se * sqrt(E2n)
+P1E2vdiff_sdCalculated = sqrt( (P1E2vi_sd^2 + P1E2vu_sd^2) )
+
+P1E1leftBiasDiff<- P1E1canonical-P1E1reversed
+P1E2leftBiasDiff<- P1E2canonical - P1E2inverted
+P1E2vertBiasDiff<- P1E2vertUpright - P1E2vertInverted
+#reported as  .258 +/- .047 in the paper
+
+#The diff standard errors are also available from the paper directly. But still need to 
+#convert to SD to get Cohen's d.
+
+P1E1diff_se<-.07; P1E1diff_sd<- P1E1diff_se*sqrt(E2n) 
+P1E2diff_se<-.038; P1E2diff_sd<- P1E2diff_se*sqrt(E2n) 
+P1E2vdiff_se<- .047; P1E2vdiff_sd<- P1E2vdiff_se*sqrt(E2n)
+
+```
+
+What was it for the first paper? For E1,`r P1E1canonical`  Canonical and 
+`r P1E1reversed` Mirror-reversed. Difference is `r P1E1canonical-P1E1reversed`
+. For E2, bias difference very similar at `r P1E2leftBiasDiff`.
+For E2 vertical arrangement, `r P1E2vertBiasDiff`
+
+
+Do conventional stats.
+```{r}
+
+require(ez)
+
+aa <- ezANOVA(data=filter(all,dv=="efficacy"), dv=leftBias, within=orientation, wid=subject)
+cat("F=", aa$ANOVA$F, " p=", aa$ANOVA$p, "\n", sep="")
+
+```
+
+Do Bayesian t-test. That is, take the likelihood of the left bias difference observed under the prior and divide it by the likelihood of the left bias difference observed under the null.
+
+Use the default Bayes test (but for E2 will use a custom prior)
+
+```{r, echo=FALSE}
+if(!require(BayesFactor)){install.packages('BayesFactor')}
+library(BayesFactor)
+
+leftBiasDifferences<- leftBiasesCanonical - leftBiasesInverted
+
+ttestResults<- ttestBF( leftBiasDifferences )
+
+```
+
+
+The Bayes factor from a one-sample default Bayes t-test for the leftBiasDifferences is `r ttestResults@bayesFactor$bf`
+
+The full results are 
+```r 
+print(ttestResults)
+```
+
+A custom prior would provide more power, as detailed in bayesianAnalysisForPrereg.Rmd in E2 folder
+
+Do the correlogram and correlation

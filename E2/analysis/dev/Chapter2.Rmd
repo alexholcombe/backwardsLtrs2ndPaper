@@ -1,0 +1,14 @@
+---
+title: "Chapter2"
+author: "Alex Holcombe"
+date: "8/28/2018"
+output: html_document
+---
+
+# Chapter 2
+
+This is chapter 2.
+
+```{r}
+2
+```
