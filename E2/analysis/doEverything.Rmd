@@ -1,42 +1,54 @@
 ---
-title: "inspect histograms"
+title: "Do everything"
 author: "Alex Holcombe"
-date: "2/26/2018"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
+The idea of this document is to have a single file that when knit does everything, [calling subsidiary Rmd documents](https://stackoverflow.com/questions/41962434/source-code-from-rmd-file-within-another-rmd)
+
+But the problem is, the importE2data.Rmd throws a bizarre error when knit, but not when run!
+Moreover, importE2data takes a very long time to run.
+So in practice, the better thing to do is to run the below files one by one.
 
 Optional validation (don't need to run this), loads raw data on its own and validates a few things 
 
-```{r validate data, echo=FALSE, message=FALSE}
-source('validateE2data.Rmd')
+```{r validate, child = 'validateE2data.Rmd'}
 ```
 
 Load data
 
-```{r load data, echo=FALSE, message=FALSE}
-source('importE2data.Rmd')
+```{r import, child = 'importE2data.Rmd'}
 ```
 
-inspect Hists for weird data, non-performing Ss
+Inspect Hists for weird data, non-performing Ss.  This is prior to mixture modeling. Will do again after mixture modeling.
 
-```{r inspectHists}
-
-source('inspectHists.Rmd')
+```{r inspectHists, child = 'inspectHists.Rmd'}
 ```
 
 Mixture model data
 
-```{r}
-source('mixModelE2data.Rmd')
+```{r inspectHists, child = 'mixModelE2data.Rmd'}
 ```
 
-Plot hists with psychophysical curves added,
+Plot two-target hists with psychophysical curves added,
 check that and likelihood ratio test for whether to exclude, 
-and infer
-```{r}
-source('inspectHistsWithFits.Rmd')
+```{r, child= 'histsWithFitsTwoTarget.Rmd'}
 ```
+
+Plot one-target hists with psychophysical curves added,
+
+```{r, child= 'histsWithFitsOneTarget.Rmd'}
+```
+
+Do exclusions, add column indicating whether subject excluded to dataframe, save that.
+Should also add handedness quotient from handednessQuotientsP2E2 but there are so few left-handers it wouldn't make a difference. Need to pool across papers to test handedness issue.
+```{r, child ='exclusions.Rmd')}
+```
+
+Look at incidence of location swaps.
+
+What will I do about orientation? I can see how often they get orientation wrong, but that by itself is not so interesting.
+I can look at the serial position correlogram of orientation and letter identity and I expect to see quite a strong correlation, contrary to what was found for two letters but something it would make sense to report at same time as Cheryl's finding.
+
+

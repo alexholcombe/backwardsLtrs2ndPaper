@@ -66,15 +66,15 @@ readInAllFiles<- function(rawDataPath) {
 
 ```{r read raw data}
 
-E<- readInAllFiles(rawDataPath)
+Ee<- readInAllFiles(rawDataPath)
 #TT<- as_tibble(E).  Seems to have no effect because weird hybrid type
 
 
 #Calculate the serial position error
-E$SPE<- E$respSP - E$targetSP
+Ee$SPE<- Ee$respSP - Ee$targetSP
 
 #give targetSide values that make  sense, like "dual", "left", and "right"
-E<- E %>% mutate(targetSide = case_when(targetSide==0 ~ "both", 
+Ee<- Ee %>% mutate(targetSide = case_when(targetSide==0 ~ "both", 
                                        targetSide==1 ~"left", targetSide==2 ~"right",
                                        TRUE ~ "unexpected value"))
 ```
@@ -87,65 +87,66 @@ Break out into target position -3, -2 etc. the targetStreamOrient variable that 
 #Need to decompose into SPE=-3 orientation, SPE=-2 orientation, etc.
 #Hm, can I use list apply to go through every row and pull out relevant bits?
 #Very time-consuming!
-E$orientMinus3<- -99; E$orientMinus2<- -99; E$orientMinus1<- -99; E$orient0<- -99; E$orientPlus1<- -99; E$orientPlus2<- -99;
+Ee$orientMinus3<- -99; Ee$orientMinus2<- -99; Ee$orientMinus1<- -99; Ee$orient0<- -99; Ee$orientPlus1<- -99; Ee$orientPlus2<- -99;
 
-for (i in 1:nrow(E)) {
+for (i in 1:nrow(Ee)) {
   #row<- E[i,]
   #orientsThis <- row$targetStreamOrientations[[1]]
   #targetPos <- row$targetSP
   #If targetSP == NaN, it's a one-target trial and wrong side
-  if (is.nan(E[i,]$targetSP)) {
-    E[i,]$orientMinus3 <- NaN
+  if (is.nan(Ee[i,]$targetSP)) {
+    Ee[i,]$orientMinus3 <- NaN
   } else {
-    E[i,]$orientMinus4 <- E[i,]$targetStreamOrientations[[1]][    E[i,]$targetSP -4    ]
-    E[i,]$orientMinus3 <- E[i,]$targetStreamOrientations[[1]][    E[i,]$targetSP -3    ]
-    E[i,]$orientMinus2 <- E[i,]$targetStreamOrientations[[1]][    E[i,]$targetSP -2    ]
-    E[i,]$orientMinus1 <- E[i,]$targetStreamOrientations[[1]][    E[i,]$targetSP -1    ]
-    E[i,]$orient0 <- E[i,]$targetStreamOrientations[[1]][    E[i,]$targetSP    ]
-    E[i,]$orientPlus1 <- E[i,]$targetStreamOrientations[[1]][    E[i,]$targetSP +1    ]
-    E[i,]$orientPlus2 <- E[i,]$targetStreamOrientations[[1]][    E[i,]$targetSP +2    ]
+    Ee[i,]$orientMinus4 <- Ee[i,]$targetStreamOrientations[[1]][    Ee[i,]$targetSP -4    ]
+    Ee[i,]$orientMinus3 <- Ee[i,]$targetStreamOrientations[[1]][    Ee[i,]$targetSP -3    ]
+    Ee[i,]$orientMinus2 <- Ee[i,]$targetStreamOrientations[[1]][    Ee[i,]$targetSP -2    ]
+    Ee[i,]$orientMinus1 <- Ee[i,]$targetStreamOrientations[[1]][    Ee[i,]$targetSP -1    ]
+    Ee[i,]$orient0 <- Ee[i,]$targetStreamOrientations[[1]][    Ee[i,]$targetSP    ]
+    Ee[i,]$orientPlus1 <- Ee[i,]$targetStreamOrientations[[1]][    Ee[i,]$targetSP +1    ]
+    Ee[i,]$orientPlus2 <- Ee[i,]$targetStreamOrientations[[1]][    Ee[i,]$targetSP +2    ]
   }
 }
 
 # More explicit way of doing it below but might take more time.
 # for (i in 1:nrow(E)) {
-#   row<- E[i,]
+#   row<- Ee[i,]
 #   orientsThis <- row$targetStreamOrientations[[1]]
 #   targetPos <- row$targetSP
 #   #If targetSP == NaN, it's a one-target trial and wrong side
 #   if (is.nan(targetPos)) {
-#     E[i,]$orientMinus3<- NaN
+#     Ee[i,]$orientMinus3<- NaN
 #   }
-#   E[i,]$orientMinus3<- orientsThis[targetPos-3]
-#   #E[i,]$orientMinus3<- E[i,]$targetStreamOrientations[[1]][targetPos-3]
-#   E[i,]$orientMinus2<- orientsThis[targetPos-2]
-#   E[i,]$orientMinus1<- orientsThis[targetPos-1]
-#   E[i,]$orient0<- orientsThis[targetPos] #should be same as $targetOrient
-#   E[i,]$orientPlus1<- orientsThis[targetPos+1]
-#   E[i,]$orientPlus2<- orientsThis[targetPos+2]
+#   Ee[i,]$orientMinus3<- orientsThis[targetPos-3]
+#   #Ee[i,]$orientMinus3<- Ee[i,]$targetStreamOrientations[[1]][targetPos-3]
+#   Ee[i,]$orientMinus2<- orientsThis[targetPos-2]
+#   Ee[i,]$orientMinus1<- orientsThis[targetPos-1]
+#   Ee[i,]$orient0<- orientsThis[targetPos] #should be same as $targetOrient
+#   Ee[i,]$orientPlus1<- orientsThis[targetPos+1]
+#   Ee[i,]$orientPlus2<- orientsThis[targetPos+2]
 # }
 ```
 
 Rename some columns
-```{r }
-E<- data
-names(E)[names(E) == 'target'] <-'stream'
-names(E)[names(E) == 'condition'] <-'orientation'
-E$stream[ E$stream==1 ] <- "Left"
-E$stream[ E$stream==2 ] <- "Right"
-E$targetSide[ E$targetSide==0 ] <- "Both"
-E$targetSide[ E$targetSide==1 ] <- "Left"
-E$targetSide[ E$targetSide==2 ] <- "Right"
+```{r renameColumns}
+#Something bizarre happens when knitting this, the below command throws error. But no problem when running without knitting
+#Error in names(E)[names(E) == "target"] <- "stream" :   names() applied to a non-vector
+names(Ee)[names(Ee) == 'target'] <-'stream'
+names(Ee)[names(Ee) == 'condition'] <-'orientation'
+Ee$stream[ Ee$stream==1 ] <- "Left"
+Ee$stream[ Ee$stream==2 ] <- "Right"
+Ee$targetSide[ Ee$targetSide==0 ] <- "Both"
+Ee$targetSide[ Ee$targetSide==1 ] <- "Left"
+Ee$targetSide[ Ee$targetSide==2 ] <- "Right"
 
-#mutate condition to Orientation
-E$orientation[ E$orientation==1 ] <- "Canonical"
-E$orientation[ E$orientation==2 ] <- "Inverted"
+#Give orientations some better names.
+Ee$orientation[ Ee$orientation==1 ] <- "Canonical"
+Ee$orientation[ Ee$orientation==2 ] <- "Inverted"
 ```
 
 Saving data.
 ```{r saveData}
-backwards2_E2 <- E
+backwards2_E2 <- Ee
 pathToSave <- file.path( "..","Data")
-saveRDS(backwards2_E2, file = "../Data/backwards2E1_rawDataFromMAT.rda", compress="bzip2")
+saveRDS(backwards2_E2, file = "../Data/backwards2E2_rawDataFromMAT.rda", compress="bzip2")
 ```
 

@@ -1,17 +1,14 @@
 ---
 title: "validateE2data"
 author: "Alex Holcombe"
-date: "2/27/2018"
+date:  "`r format(Sys.time(), '%d %B, %Y')`"
 output: html_document
 ---
-Optional validation (don't need to run this), loads raw data on its own and validates a few things 
+
+Optional validation (don't have to run this to go to next step), loads raw data on its own and validates a few things 
 
 1/3 of trials have 1 target (numTargets==1)
 targetSide ==0  means targets on both sides 
-
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
 
 Checking some stuff out
 
@@ -187,6 +184,7 @@ dg<- E2 %>% filter(subject < "AC")
 
 library(ggplot2)
 g=ggplot(dg, aes(x=SPE)) + facet_grid(subject+orientation~stream) #,  scales="free_y")
+minSPE<- -17; maxSPE<- 17  #But it's 16 items in stream, so shouldn't it be -15, +15?
 g<-g+geom_histogram(binwidth=1,color="grey90") + xlim(minSPE,maxSPE)
 g<-g+ geom_text(x=12, y= 33, aes(label = subject)) #inset subject name/number. Unfortunately it overwrites itself a million times
 show(g)
