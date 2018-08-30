@@ -26,27 +26,6 @@ estimates<- read.csv(file = file.path(resultsPath,"/backwards2E2_paramEstimates.
 
 ```
 
-Fix the variable names if not done
-
-```{r, echo=FALSE, message=FALSE}
-#Below should now be done by import
-if ('target' %in% names(data)) {
-  names(data)[names(data) == 'target'] <-'stream'
-  names(data)[names(data) == 'condition'] <-'orientation'
-  data$stream[ data$stream==1 ] <- "Left"
-  data$stream[ data$stream==2 ] <- "Right"
-}
-if (is.numeric(data$targetSide)) {
-  data$targetSide[ data$targetSide==0 ] <- "Both"
-  data$targetSide[ data$targetSide==1 ] <- "Left"
-  data$targetSide[ data$targetSide==2 ] <- "Right"
-}
-if (is.numeric(data$orientation)) {
-  #mutate condition to Orientation
-  data$orientation[ data$orientation==1 ] <- "Canonical"
-  data$orientation[ data$orientation==2 ] <- "Inverted"
-}
-```
 
 Add the parameter estimates to the tibble
 
@@ -80,18 +59,6 @@ numSs<-length(unique(dg$subject))
 cat( paste0('Total num Ss=',numSs) )
 ```
 
-Calc numObservations for each condition
-```{r }
-#Calc numObservations for each condition. This is needed  for scaling the fine-grained Gaussian
-#gaussianScaledforData needs to know.
-if (!("nPerCond" %in% colnames(dg))) {
-  dfGroups<-  dg  %>%  filter( !is.na(targetSP) ) %>% group_by_at(.vars = condtnVariableNames) %>% summarise(nPerCond = n())
-  #add nPerCond back to parameter estimates
-  estimates<- merge(estimates,dfGroups)
-}
-```
-
-
 
 Calculate curves for parameters, to plot on histograms.
 ```{r, echo=TRUE, message=FALSE, fig.height=360, fig.width=10}
@@ -121,11 +88,7 @@ curves<- dg %>% #filter(subject >= "AA" ) %>%
 
 
 ```{r }
-# #Calc numObservations to each condition. This is needed only for scaling the fine-grained Gaussian
-# #Calc the number of observations for each condition, because gaussianScaledforData needs to know.
-# dfGroups<- dg %>% group_by_at(.vars = condtnVariableNames) %>% summarise(nPerCond = n())
-# #add nPerCond back to parameter estimates
-# estimates<- merge(estimates,dfGroups)
+# The fine-grained Gaussian to potentially plot
 
 grain<-.05
 gaussFine<- estimates %>% group_by_at(.vars = condtnVariableNames) %>% do(
@@ -151,8 +114,8 @@ Show single plot with curves using scalable method to facet_grid
 ```{r singleHistPlotScalable, echo=FALSE}
 
 dAC<- dplyr::filter(dg,subject=="AC")  
-bothSides<- dAC %>% filter(targetSide=="Both")
-bothSidesCurves <- curves %>% filter(subject=="AC") %>% filter(targetSide=="Both")
+bothSides<- dAC %>% filter(targetSide=="both")
+bothSidesCurves <- curves %>% filter(subject=="AC") %>% filter(targetSide=="both")
 
 g=ggplot(bothSides, aes(x=SPE)) + 
         facet_grid(orientation~stream) #,  scales="free_y")
@@ -224,8 +187,8 @@ Exclude by likelihood ratio test
 Participant AI, BB suspicion of  attending to one side, let's see which people fail single-target test.
 
 ```{r singleTarget}
-oneSide<- dg %>% filter(targetSide!="Both")
-oneSideCurves <- curves %>% filter(targetSide!="Both")
+oneSide<- dg %>% filter(targetSide!="both")
+oneSideCurves <- curves %>% filter(targetSide!="both")
 
 g=ggplot(oneSide %>% filter(subject=="AA"), aes(x=SPE)) + 
         facet_grid(subject+orientation~stream) #,  scales="free_y")

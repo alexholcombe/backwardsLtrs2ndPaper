@@ -15,7 +15,6 @@ knitr::opts_chunk$set(echo = TRUE)
 Modified from importE1data.R
 
 ```{r set up functions}
-
 #Loads raw data from MATLAB files for second backwards paper second experiment
 require(R.matlab)
 
@@ -69,7 +68,6 @@ readInAllFiles<- function(rawDataPath) {
 Ee<- readInAllFiles(rawDataPath)
 #TT<- as_tibble(E).  Seems to have no effect because weird hybrid type
 
-
 #Calculate the serial position error
 Ee$SPE<- Ee$respSP - Ee$targetSP
 
@@ -79,15 +77,33 @@ Ee<- Ee %>% mutate(targetSide = case_when(targetSide==0 ~ "both",
                                        TRUE ~ "unexpected value"))
 ```
 
+
+Rename some columns
+```{r renameColumns}
+#Something bizarre happens when knitting this, the below command throws error. But no problem when running without knitting
+#Error in names(E)[names(E) == "target"] <- "stream" :   names() applied to a non-vector
+names(Ee)[names(Ee) == 'target'] <-'stream'
+names(Ee)[names(Ee) == 'condition'] <-'orientation'
+Ee$stream[ Ee$stream==1 ] <- "Left"
+Ee$stream[ Ee$stream==2 ] <- "Right"
+Ee$targetSide[ Ee$targetSide==0 ] <- "Both"
+Ee$targetSide[ Ee$targetSide==1 ] <- "Left"
+Ee$targetSide[ Ee$targetSide==2 ] <- "Right"
+
+#Give orientations some better names.
+Ee$orientation[ Ee$orientation==1 ] <- "Canonical"
+Ee$orientation[ Ee$orientation==2 ] <- "Inverted"
+```
+
 Next is very TIME CONSUMING.
 
-Break out into target position -3, -2 etc. the targetStreamOrient variable that contains the orientaiton of each item. This will allow seeing whether having several orientations in a row triggers the lateral bias.
+Break out into target position -4, -3, -2 etc. the targetStreamOrientation variable that contains the orientation of each item. This will allow seeing whether having several orientations in a row triggers the lateral bias.
 
 ```{r veryTimeConsuming}
 #Need to decompose into SPE=-3 orientation, SPE=-2 orientation, etc.
 #Hm, can I use list apply to go through every row and pull out relevant bits?
 #Very time-consuming!
-Ee$orientMinus3<- -99; Ee$orientMinus2<- -99; Ee$orientMinus1<- -99; Ee$orient0<- -99; Ee$orientPlus1<- -99; Ee$orientPlus2<- -99;
+Ee$orientMinus4<- -99; Ee$orientMinus3<- -99; Ee$orientMinus2<- -99; Ee$orientMinus1<- -99; Ee$orient0<- -99; Ee$orientPlus1<- -99; Ee$orientPlus2<- -99;
 
 for (i in 1:nrow(Ee)) {
   #row<- E[i,]
@@ -126,21 +142,23 @@ for (i in 1:nrow(Ee)) {
 # }
 ```
 
-Rename some columns
-```{r renameColumns}
-#Something bizarre happens when knitting this, the below command throws error. But no problem when running without knitting
-#Error in names(E)[names(E) == "target"] <- "stream" :   names() applied to a non-vector
-names(Ee)[names(Ee) == 'target'] <-'stream'
-names(Ee)[names(Ee) == 'condition'] <-'orientation'
-Ee$stream[ Ee$stream==1 ] <- "Left"
-Ee$stream[ Ee$stream==2 ] <- "Right"
-Ee$targetSide[ Ee$targetSide==0 ] <- "Both"
-Ee$targetSide[ Ee$targetSide==1 ] <- "Left"
-Ee$targetSide[ Ee$targetSide==2 ] <- "Right"
+Sanity check the orientMinus4, orientMinus3, etc.
+What I don't understand is why the anti-diagonal (the frequency of orientations on two different frames being different rather than being the same orientation)
+Maybe it's related to half of those being the same stream and half the opposite stream?
 
-#Give orientations some better names.
-Ee$orientation[ Ee$orientation==1 ] <- "Canonical"
-Ee$orientation[ Ee$orientation==2 ] <- "Inverted"
+I've checked some individual streams and they don't have any obvious constraints, look random.
+
+Because allLetterOrientations didn't have second dimension, unlike allLetterOrder, I assumed only the target stream was saved (after all, both have same orientation) and I called it targetStreamOrientations. I have now done code review of the MATLAB file, DualRSVP_randomOrientationWithinStreams.m
+
+```{r }
+
+table(Ee$orientMinus2,Ee$orientPlus1)
+
+```
+
+Yes, nan targetSP are in there, which are when is one-target trial and reporting other stream
+```{r}
+Ee %>% filter(is.nan(targetSP) )
 ```
 
 Saving data.

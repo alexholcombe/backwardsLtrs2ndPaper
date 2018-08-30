@@ -423,11 +423,18 @@ if ~skipInstructions
 
             letterStream = mod([randperm(nItems); randperm(nItems)],nLetters)+1;
             letterOrientaion =  repmat(0:1,1,nLetters/2); % Must be an even number of letters in letterArray
+            %AH Now shuffle that list of 0's and 1's, by creating randomly shuffled indices
             letterOrientaion = letterOrientaion(randperm(length(letterOrientaion)));
             
             %Check target has correct orientation
             if (thisCondition==1)&&(letterOrientaion(thisTarget(1,1))==1)
-                uprightLetters = find(letterOrientaion==0);
+            	%AH I presume the above being true means target has the wrong orientation
+                uprightLetters = find(letterOrientaion==0); %AH uprightLetters now is a list of indices of where the stream has the correct orientation 
+                %AH Now, shuffle the 
+                %AH What does the ",1" do in randperm
+                %AH Seems like its setting a random upright letter to upside down,
+                %AH that way can then set the actual target to rightside up
+                %AH randperm(n,k) returns a row vector containing k unique integers selected randomly from 1 to n inclusive.  In other words, picks one of the upright letter positions
                 letterOrientaion(uprightLetters(randperm(length(uprightLetters),1))) = 1;
                 letterOrientaion(thisTarget(1,1)) = 0;
             elseif (thisCondition==2)&&(letterOrientaion(thisTarget(1,1))==0)                

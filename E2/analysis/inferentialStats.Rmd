@@ -20,6 +20,7 @@ data<- as_tibble(data)
 
 Why is there no targetSP==NA in data? That's the rows reporting stream on opposite side. Eventually, use those to evaluate swaps. I don't know what happened to it, because it's created in 
 exclusions.Rmd, which on line 67 creates the thing merged with estimates that is saved. 
+It's in backwards2E2_rawDataFromMAT.rda, but not with Estimates thing, fuck
 filter( !is.na(targetSP) )
 
 

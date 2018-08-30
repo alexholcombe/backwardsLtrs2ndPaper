@@ -89,7 +89,8 @@ turnMATintoMeltedDataframe<- function(fromMAT) {
   
   #The only other variable that is a list even after splitting by target is allLetterOrientations
   # allLetterOrientations  : num [1:216, 1:16] 1 0 1 0 0 0 1 0 1 0 ...
-  # Because doesn't have second dimension, unlike allLetterOrder, seems only the target stream was saved?
+  # Because doesn't have second dimension, unlike allLetterOrder, seems only the target stream was saved,
+  # which would make sense because both streams have the same orientation.
   # We will have to set it to NULL to avoid list, but want to preserve the orientations at
   # least for a few items around the target so can assess if takes time to build up.
   # Need to ask Chris to verify it's the target stream it's recording.

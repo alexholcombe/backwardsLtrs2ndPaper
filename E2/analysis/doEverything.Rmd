@@ -46,6 +46,11 @@ Should also add handedness quotient from handednessQuotientsP2E2 but there are s
 ```{r, child ='exclusions.Rmd')}
 ```
 
+
+```{r, child ='inferentialStats.Rmd')}
+```
+
+
 Look at incidence of location swaps.
 
 What will I do about orientation? I can see how often they get orientation wrong, but that by itself is not so interesting.
