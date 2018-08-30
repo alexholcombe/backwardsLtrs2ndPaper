@@ -18,10 +18,6 @@ data<- readRDS( file.path(dataPath, "backwards2E2_dataWithEstimatesAndExcludeCol
 data<- as_tibble(data)
 ```
 
-Why is there no targetSP==NA in data? That's the rows reporting stream on opposite side. Eventually, use those to evaluate swaps. I don't know what happened to it, because it's created in 
-exclusions.Rmd, which on line 67 creates the thing merged with estimates that is saved. 
-It's in backwards2E2_rawDataFromMAT.rda, but not with Estimates thing, fuck
-filter( !is.na(targetSP) )
 
 
 For inferential stats, don't care about individual trials, so extract parameter estimates from full tibble.
@@ -42,11 +38,11 @@ Plot data
 
 ```{r, echo=FALSE, message=FALSE}
 require(ggplot2)
-gg<-ggplot(estimates %>% filter(targetSide=="Both"), 
+gg<-ggplot(estimates %>% filter(targetSide=="both"), 
            aes(x=stream, y=efficacy, color=orientation)) + geom_point() + stat_summary(fun.y="mean",geom="point",size=8, alpha=.5) + theme_apa() +ggtitle('nobody excluded')
 show(gg)
 
-hh<-ggplot(estimates %>% filter(targetSide=="Both", exclude==FALSE), aes(x=stream, y=efficacy, color=orientation)) + 
+hh<-ggplot(estimates %>% filter(targetSide=="both", exclude==FALSE), aes(x=stream, y=efficacy, color=orientation)) + 
   geom_point(position = position_dodge(width = 0.3)) + stat_summary(fun.y="mean",geom="point",size=4, alpha=.5, position = position_dodge(width = 0.3)) + 
   theme_apa() +ggtitle('after exclusions') + 
   stat_summary(fun.data = mean_cl_boot, geom="errorbar", width=0.4, position = position_dodge(width = 0.3))
@@ -61,13 +57,13 @@ BG, BJ, and AP have sigma near 4, clear outliers.
 ```{r, echo=FALSE, message=FALSE}
 require(ggplot2)
 
-hh<-ggplot(estimates %>% filter(targetSide=="Both", exclude==FALSE), aes(x=stream, y=latency, color=orientation)) + 
+hh<-ggplot(estimates %>% filter(targetSide=="both", exclude==FALSE), aes(x=stream, y=latency, color=orientation)) + 
   geom_point(position = position_dodge(width = 0.3)) +  stat_summary(fun.y="mean",geom="point",size=4, alpha=.5, position = position_dodge(width = 0.3)) + 
   theme_apa() +ggtitle('after exclusions') + 
   stat_summary(fun.data =mean_cl_boot, geom="errorbar", width=0.4, position = position_dodge(width = 0.3))
 show(hh)
 
-ii<-ggplot(estimates %>% filter(targetSide=="Both", exclude==FALSE), aes(x=stream, y=precision, color=orientation)) + 
+ii<-ggplot(estimates %>% filter(targetSide=="both", exclude==FALSE), aes(x=stream, y=precision, color=orientation)) + 
   geom_point(position = position_dodge(width = 0.3)) +  stat_summary(fun.y="mean",geom="point",size=4, alpha=.5, position = position_dodge(width = 0.3)) + 
   theme_apa() +ggtitle('after exclusions') + 
   stat_summary(fun.data =mean_cl_boot, geom="errorbar", width=0.4, position = position_dodge(width = 0.3))
@@ -102,7 +98,7 @@ head(all)
 Calculate and plot bias. 
 ```{r , fig.height=20, fig.width=5}
 all$leftBias<- all$Left - all$Right
-hh<-ggplot(all %>% filter(targetSide=="Both"), 
+hh<-ggplot(all %>% filter(targetSide=="both"), 
            aes(x=orientation, y=leftBias)) + facet_grid(dv~., scales="free") +
     stat_summary(fun.y="mean",geom="point",size=4, alpha=.5) + geom_point() +
   stat_summary(fun.data = mean_cl_boot, geom="errorbar", width=0.2) + theme_apa() +

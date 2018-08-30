@@ -70,8 +70,7 @@ dg<-dat %>% filter( !is.na(targetSP) ) #excluding 1-target trials rows reporting
 
 ```
 
-Merge operation lost it  targetSP==NA in data? That's the rows reporting stream on opposite side. Eventually, use those to evaluate swaps. I don't know what happened to it, because it's created in 
-exclusions.Rmd, which on line 67 creates the thing merged with estimates that is saved. 
+Merge operation lost   targetSP==NA in data, but now fixed
 ```{r, echo=FALSE}
 table(dat$targetSP,useNA="ifany")
 
