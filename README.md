@@ -1,3 +1,5 @@
+Should probably get serious about analyzing both E1 and E2 in the same Rmd files so can write the paper.
+
 Subjects AA through AE run ok, aside from several 
 "Error in eigen(nhatend) : infinite or missing values in 'x'" 
 

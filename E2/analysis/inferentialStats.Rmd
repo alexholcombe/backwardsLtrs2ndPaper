@@ -95,6 +95,7 @@ all<-rbind(eff,lat,pre)
 head(all)
 ```
 
+
 Calculate and plot bias. 
 ```{r , fig.height=20, fig.width=5}
 all$leftBias<- all$Left - all$Right
@@ -151,6 +152,13 @@ P1E2diff_se<-.038; P1E2diff_sd<- P1E2diff_se*sqrt(E2n)
 P1E2vdiff_se<- .047; P1E2vdiff_sd<- P1E2vdiff_se*sqrt(E2n)
 
 ```
+
+For correlogram
+```{r}
+SPE<-data.table::dcast(estimates, orientation+subject+exclude+targetSide~stream,
+                       value.var="SPE") 
+```
+
 
 What was it for the first paper? For E1,`r P1E1canonical`  Canonical and 
 `r P1E1reversed` Mirror-reversed. Difference is `r P1E1canonical-P1E1reversed`

@@ -50,6 +50,8 @@ Should also add handedness quotient from handednessQuotientsP2E2 but there are s
 ```{r, child ='inferentialStats.Rmd')}
 ```
 
+```{r, child ='analyzeStreakOfOrientations.Rmd')}
+```
 
 Look at incidence of location swaps.
 

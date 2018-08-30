@@ -1,5 +1,5 @@
 ---
-title             : "The title"
+title             : "Backwards letters paper 2"
 shorttitle        : "Title"
 
 author: 
@@ -13,7 +13,7 @@ author:
 
 affiliation:
   - id            : "1"
-    institution   : "Wilhelm-Wundt-University"
+    institution   : "The University of Sydney"
   - id            : "2"
     institution   : "Konstanz Business School"
 
@@ -23,7 +23,7 @@ authornote: |
   Enter author note here.
 
 abstract: |
-  One or two sentences providing a **basic introduction** to the field,  comprehensible to a scientist in any discipline.
+  During natural reading of canonically-oriented English text, attention shifts from left to right. 
   
   Two to three sentences of **more detailed background**, comprehensible  to scientists in related disciplines.
   
