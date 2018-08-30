@@ -1,0 +1,94 @@
+---
+title: "orientationStreaks"
+author: "Alex Holcombe"
+date: "2/27/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Read in data, parameter estimates
+
+```{r}
+dataPath <- file.path( "..","Data")
+#Created by exclusions.Rmd
+ff<- readRDS( file.path(dataPath, "backwards2E2_dataWithEstimatesAndExcludeColumn.rda") ) 
+ff<- as_tibble(ff)
+```
+
+
+Yes, nan targetSP are in there, which are when is one-target trial and reporting other stream
+```{r}
+table(ff$targetSP,useNA="ifany")
+#ff %>% filter(is.nan(targetSP) )
+
+```
+
+Look at proportion correct for SPE -1,0,1 as function of number of orientations in a row
+
+Calculate approx correct, then mean for each condition.
+First do it for all trials, not for streaks
+```{r}
+ff <- ff %>% mutate(approxCorr = as.numeric( abs(SPE)<=1  )) 
+  
+hh<- ff %>% select(-targetStreamOrientations,-letterSeq) %>% #can't include list columns
+  filter(!is.nan(targetSP), numTargets>1) %>%
+  group_by(subject,targetSide,orientation,stream) %>% #in other words, average over trials 
+  summarise_all( function(x){ if(is.numeric(x)){ return(mean(x)) } else{ nth(x,-1) } })
+```
+
+Plot data
+
+```{r, echo=FALSE, message=FALSE}
+require(ggplot2)
+ppp<-ggplot(hh %>% filter(targetSide=="both", exclude==FALSE), 
+           aes(x=stream, y=approxCorr, color=orientation)) + geom_point() +
+    stat_summary(fun.y="mean",geom="point",size=8, alpha=.5) + 
+    stat_summary(fun.y="mean",geom="line",aes(group=orientation)) + 
+    stat_summary(fun.data = mean_cl_boot, geom="errorbar", width=0.2) +
+    theme_apa() +ggtitle('after exclusions')
+show(ppp)
+
+```
+
+Now filter by streakiness
+
+```{r, echo=FALSE}
+
+ff<- ff %>% mutate( streak4 = (orientMinus3==orientMinus2) & (orientMinus2==orientMinus1) & (orientMinus1==orient0) )
+
+jj<- ff %>% select(-targetStreamOrientations,-letterSeq) %>% #can't include list columns
+  filter(!is.nan(targetSP), numTargets>1) %>%
+  filter(streak4==TRUE) %>%
+  group_by(subject,targetSide,orientation,stream) %>% #in other words, average over trials 
+  summarise_all( function(x){ if(is.numeric(x)){ return(mean(x)) } else{ nth(x,-1) } })
+
+pp<-ggplot(jj %>% filter(targetSide=="both", exclude==FALSE), 
+           aes(x=stream, y=approxCorr, color=orientation)) + geom_point() +
+      stat_summary(fun.y="mean",geom="point",size=8, alpha=.5) + 
+      stat_summary(fun.y="mean",geom="line",aes(group=orientation)) + 
+      stat_summary(fun.data = mean_cl_boot, geom="errorbar", width=0.2) +
+      theme_apa() +ggtitle('after exclusions, and streak of 3 trials only')
+show(pp)
+```
+
+Combine streak trials and non-streak trials in single plot
+
+```{r, echo=FALSE}
+jj<- ff %>% select(-targetStreamOrientations,-letterSeq) %>% #can't include list columns
+  filter(!is.nan(targetSP), numTargets>1) %>%
+  group_by(subject,streak4,targetSide,orientation,stream) %>% #in other words, average over trials 
+  summarise_all( function(x){ if(is.numeric(x)){ return(mean(x)) } else{ nth(x,-1) } })
+
+qq<-ggplot(jj %>% filter(targetSide=="both", exclude==FALSE), 
+           aes(x=stream, y=approxCorr, color=orientation)) + geom_point() +
+      stat_summary(fun.y="mean",geom="point",size=8, alpha=.5) + 
+      stat_summary(fun.y="mean",geom="line",aes(group=orientation)) + 
+      stat_summary(fun.data = mean_cl_boot, geom="errorbar", width=0.2) + facet_grid(.~streak4) +
+      theme_apa() +ggtitle('after exclusions. Not streak of 4 (left) and streak of 4 (right) ')
+show(qq)
+```
+
+No effect of the streak on the left bias. But it does look like it might have helped overall performance to have the streak, which would be cool, because it'd show the streak was registered in a sense by the brain.
