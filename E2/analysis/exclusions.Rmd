@@ -64,8 +64,18 @@ es<- as_data_frame(estimates)
 #Looks like each subject has only 8 efficacy values somehow, it's because there was an extra
 #variable, X
 es$X <- NULL
-dat<- merge(dd,es)
+#oldNoNa<- merge(dd,es) #loses the is.na(targetSP) rows
+dat<- merge(dd,es, all = TRUE)
 dg<-dat %>% filter( !is.na(targetSP) ) #excluding 1-target trials rows reporting stream on opposite side. Eventually, use those to evaluate swaps.
+
+```
+
+Merge operation lost it  targetSP==NA in data? That's the rows reporting stream on opposite side. Eventually, use those to evaluate swaps. I don't know what happened to it, because it's created in 
+exclusions.Rmd, which on line 67 creates the thing merged with estimates that is saved. 
+```{r, echo=FALSE}
+table(dat$targetSP,useNA="ifany")
+
+#dat %>% filter( is.na(targetSP) )
 ```
 
 One-target:
@@ -97,7 +107,7 @@ Also check whether average efficacy is below 10% in both streams in either the u
 
 ```{r exclusions}
 
-twoTarget<- dg %>% filter(targetSide=="Both")
+twoTarget<- dg %>% filter(targetSide=="both")
 
 #first, collapse over trials
 #https://stackoverflow.com/questions/51978519/summarise-numeric-columns-return-last-value-of-non-numeric
@@ -125,7 +135,7 @@ Will exclude subject if failed likelihood test for both left and right in either
 Will also exclude if difference in efficacy left-right exceeds?
 ```{r }
 #Calculate exclusions based on one-target performance
-oneTarget<- dg %>% filter(targetSide!="Both")
+oneTarget<- dg %>% filter(targetSide!="both")
 one<- oneTarget %>% group_by(subject,targetSide,orientation) %>% 
   select(-targetStreamOrientations,-letterSeq) %>% #can't include list columns
   select(-trial,-targetSP,-respSP,-respOrder) %>% #clear detritus so easier to see
@@ -135,16 +145,16 @@ one<- oneTarget %>% group_by(subject,targetSide,orientation) %>%
 effDiff <- function(df) {
   #dgi<<-df
   #STOP
-  effLeft<- (df %>% filter(targetSide=="Left"))$efficacy 
-  effRight<- (df %>% filter(targetSide=="Right"))$efficacy
+  effLeft<- (df %>% filter(targetSide=="left"))$efficacy 
+  effRight<- (df %>% filter(targetSide=="right"))$efficacy
   df$effDiff<- effLeft - effRight
   df$effLeft <- effLeft; df$effRight <- effRight
   
   df$efficacy<- mean(c(effLeft,effRight))
   df$effDiff<- effLeft - effRight
   
-  failedBothLR <- ((df %>% filter(targetSide=="Left"))$pLRtest >= .05) &
-    ((df %>% filter(targetSide=="Right"))$pLRtest >= .05)
+  failedBothLR <- ((df %>% filter(targetSide=="left"))$pLRtest >= .05) &
+    ((df %>% filter(targetSide=="right"))$pLRtest >= .05)
   df$failedBothLR <- failedBothLR
   
   return(df[1,]) #return first row, so it does get collapsed
@@ -161,12 +171,12 @@ Make scatterplot of efficacy for left vs. right single target
 
 ```{r}
 #To do that, do I'd either need to unmelt (spread) but rather than do that, I programmed putting effLeft and effRight on same row into effDiff
+library(ggplot2)
 g<- ggplot(oneDiff, aes(x=effLeft, y=effRight, color=orientation)) + geom_point()
-g<-g +  geom_abline(intercept = 0, slope = 1) + theme_apa() + xlim(0,1) + ylim(0,1)
+g<-g +  geom_abline(intercept = 0, slope = 1) + theme_bw() + xlim(0,1) + ylim(0,1)
 g +    geom_rug(col=rgb(.5,0,0,alpha=.2))
 
 ```
-
 
 Make scatterplot of efficacy difference between left and right single target on horizontal axis and dual-target difference on vertical axis.
 
@@ -178,17 +188,18 @@ I now have LRtestLosers, lowEffLosers, and oneTargetLosers
 
 Actually exclude the losers? Probably better if flag them so can run inferential stats both with and without them.
 
-```{r exclude, echo=FALSE}
+```{r excludeAll, echo=FALSE}
 allLosers <- unique( c(LRtestLosers, lowEffLosers, oneTargetLosers) )
 #afterExclusions<- dat %>% filter(  !(subject %in% lowEffs)   )
 dat <- dat %>% mutate(exclude = (subject %in% allLosers))
 #table(dat$subject,dat$exclude)
 ```
 
+
+
 Next stop, inferential stats?  Save data with estimates and exclude field added.
 
 ```{r exclude, echo=FALSE}
-
 pathToSave <- file.path( "..","Data")
 saveRDS(dat, file.path(pathToSave,"backwards2E2_dataWithEstimatesAndExcludeColumn.rda"), compress = "bzip2")
 ```
