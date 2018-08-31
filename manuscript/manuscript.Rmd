@@ -3,12 +3,12 @@ title             : "Backwards letters paper 2"
 shorttitle        : "Title"
 
 author: 
-  - name          : "First Author"
+  - name          : "Alex O. Holcombe"
     affiliation   : "1"
     corresponding : yes    # Define only one corresponding author
-    address       : "Postal address"
+    address       : "School of Psychology, Brennan MacCallum Bldg (A19), The University of Sydney, Sydney, NSW 2006, Australia"
     email         : "my@email.com"
-  - name          : "Ernst-August Doelle"
+  - name          : "Christopher Bush"
     affiliation   : "1,2"
 
 affiliation:
@@ -18,31 +18,18 @@ affiliation:
     institution   : "Konstanz Business School"
 
 authornote: |
-  Add complete departmental affiliations for each author here. Each new line herein must be indented, like this line.
+  Add complete departmental affiliations for each author here. Each new line herein must be indented, like this line. This manuscript was written in RMarkdown using the *papaja* package [@R-papaja].
 
   Enter author note here.
 
 abstract: |
-  During natural reading of canonically-oriented English text, attention shifts from left to right. 
+  When one reads, early visual stages process the letters and words in parallel, but at a later stage, letters may need to be selected by attention to be fully processed. This transition to limited-capacity processing has recently been studied with a task requiring identification of simultaneously-presented letters embedded in a longer stream. Performance is markedly worse for identifying two letters rather than one. Although the task bears little resemblance to natural reading, implicit reading direction based on the letters' orientation nevertheless can determine which letter is poorly reported. This might be a result of word recognition processes rapidly and automatically extracting allocentric or object-relative reference frames. Alternatively, prioritisation based on implicit reading order (a left bias, for canonically-oriented letters) may not occur without a repeated regularity, such as the same orientation being used on multiple trials. In previous investigations, the trials were blocked, with all letters in the stream having the same orientation. Here, we first showed strong reading-order prioritization when trial order was random. Second, we found that when each frame within the stream had a random orientation, the bias was no longer affected by letter orientation, and defaulted to a left bias. Analysis of the errors supports the theory that the two streams of letters are sampled simultaneously, and a high-level process prioritizes one stream for consolidation into memory. 
+  <!-- 250 word max for Memory & Cognition, https://www.springer.com/psychology/cognitive+psychology/journal/13421  -->
   
-  Two to three sentences of **more detailed background**, comprehensible  to scientists in related disciplines.
-  
-  One sentence clearly stating the **general problem** being addressed by  this particular study.
-  
-  One sentence summarizing the main result (with the words "**here we show**" or their equivalent).
-  
-  Two or three sentences explaining what the **main result** reveals in direct comparison to what was thought to be the case previously, or how the  main result adds to previous knowledge.
-  
-  One or two sentences to put the results into a more **general context**.
-  
-  Two or three sentences to provide a **broader perspective**, readily comprehensible to a scientist in any discipline.
-  
-  <!-- https://tinyurl.com/ybremelq -->
-  
-keywords          : "keywords"
+keywords          : "letters, words, attention, reading, allocentric"
 wordcount         : "X"
 
-bibliography      : ["r-references.bib"]
+bibliography      : ["referencesInfo/r-references.bib","referencesInfo/references.bib"]
 
 floatsintext      : no
 figurelist        : no
@@ -67,17 +54,36 @@ set.seed(42)
 knitr::opts_chunk$set(cache.extra = knitr::rand_seed)
 ```
 
+# Introduction
+
+As you read these words, early visual stages process the letters and words in parallel. But at a later stage, letters may need to be selected by attention to be fully processed [@reichle_serial-attention_2011; @treisman_feature_1980]. This transition to limited-capacity processing has recently been studied with a task requiring identification of simultaneously-presented letters embedded in a longer stream. Performance is markedly worse for identifying two letters rather than one. Although the task bears little resemblance to natural reading, implicit reading direction based on the letters' orientation nevertheless can determine which letter is poorly reported. This might be a result of word recognition processes rapidly and automatically extracting allocentric or object-relative reference frames. Alternatively, prioritisation based on implicit reading order (a left bias, for canonically-oriented letters) may not occur without a repeated regularity, such as the same orientation being used on multiple trials. In previous investigations, the trials were blocked, with all letters in the stream having the same orientation. Here, we first showed strong reading-order prioritization when trial order was random. Second, we found that when each frame within the stream had a random orientation, the bias was no longer affected by letter orientation, and defaulted to a left bias. Analysis of the errors supports the theory that the two streams of letters are sampled simultaneously, and a high-level process prioritizes one stream for consolidation into memory. 
+
+The hypotheses, stopping rule, and other details of both experiments was preregistered (E1: https://osf.io/jdy8p/register/565fb3678c5e4a66b5582f67; E2: )
+
+# Experiment 1
+
+For the first experiment, 
+ https://osf.io/jdy8p/register/565fb3678c5e4a66b5582f67
+
+The experiment compares two within-subject levels of letter orientation (canonical or inverted), participants will experience both conditions within a single experimental session with the conditions presented in a mixed order. The method is almost exactly the same as that of Holcombe, Nguyen, & Goodbourn (in press). The only non-trivial difference is that in that experiment the two conditions were presented in separate blocks, whereas here they are mixed. This will allow us to determine whether simply seeing the backwards letters on an individual trial is sufficient to stop left-side prioritization, or whether having repeated successive trials of a particular condition is necessary. This speaks to how automatic the left-side prioritization observed in Holcombe et al. (in press) is.
+
+If the left-side prioritisation is caused by implied reading direction then the left side bias will be stronger for letters presented in canonical orientation compared to inverted letters. Based on the findings of Holcombe, Nguyen, & Goodbourn (in press), we predict that the left bias will be significantly stronger in canonical orientation than inverted.
+We predict that latency and precision will not differ significantly between letter orientations
 
 
-# Methods
+## Methods
+
 We report how we determined our sample size, all data exclusions (if any), all manipulations, and all measures in the study. <!-- 21-word solution (Simmons, Nelson & Simonsohn, 2012; retrieved from http://ssrn.com/abstract=2160588) -->
 
-## Participants
+### Participants
+
+Our original study (Holcombe, Nguyen, & Goodbourn, in press) of the effect of rotating the letters so they faced to the left yielded a large effect size of Cohen’s d = .94, which requires a sample size of only 14 to detect with 95% power. However, we expected that mixing the conditions within a block, as done here, might result in an effect size somewhat smaller, which led us to plan a sample size of 45 before exclusions (more details at the preregistration). 
+
+Forty-five participants were run (XXX females).
 
 ### Exclusions
 
-In the prereg, we wrote: "
-Participants will be excluded if their average efficacy is below 10% in both streams in either the upright or the reversed orientation), or if the likelihood ratio test testing whether the data is fit better by the mixture model than by the guessing distribution fails (is not less than p<.05) for three or four of the four conditions. Because the Gaussian component of the mixture model is constrained to only allow latencies between -4 and 4, one effect of this is to eliminate participants who consistently do not report a letter near the time of the ring, instead for example reporting one of the last few items in the stream, which the data of past experiments indicates that rare participants do."
+As planned, six participants whose efficacy in either RSVP stream in any condition was lower than 10% (as indicated by the mixture modeling code) were removed from data analysis to reduce floor effects.
 
 ## Material
 
@@ -95,6 +101,15 @@ We used `r cite_r("r-references.bib")` for all our analyses.
 # Results
 
 # Discussion
+
+# Experiment 2
+
+## Method
+
+### Exclusions
+
+In the prereg, we wrote: "
+Participants will be excluded if their average efficacy is below 10% in both streams in either the upright or the reversed orientation), or if the likelihood ratio test testing whether the data is fit better by the mixture model than by the guessing distribution fails (is not less than p<.05) for three or four of the four conditions. Because the Gaussian component of the mixture model is constrained to only allow latencies between -4 and 4, one effect of this is to eliminate participants who consistently do not report a letter near the time of the ring, instead for example reporting one of the last few items in the stream, which the data of past experiments indicates that rare participants do."
 
 
 \newpage

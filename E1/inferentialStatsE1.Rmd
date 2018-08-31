@@ -13,30 +13,45 @@ Read in parameter estimates
 
 ```{r}
 
-estimates<- read.csv(file="Results/backwards2E1_paramEstimates.csv", header=TRUE, sep=",")
+resultsPath <- file.path("Results")
+estimates<- read.csv(file=file.path(resultsPath,"backwards2E1_paramEstimates.csv"), header=TRUE, sep=",")
 estimates$X<- NULL #Not sure where X comes from but it's just a row number
+library(tidyverse)
+estimates <- as_tibble(estimates)
 ```
 
+## Exclusions
+
+Exclusion based on low efficacy - "participants whose efficacy in either RSVP stream in any condition  lower than 10% (as indicated by the mixture modeling code)  removed from data analysis to reduce floor effects."
 
 Exclude Ss who failed likelihood ratio test in all four cases.
 Create new column nPassed for in how many conditions they passed (out of 4).
 
+There was no mention of the LRtest in the prereg, forgot to mention that probably. But I looked at it and was fairly consistent with low efficacy.
+
 ```{r}
-library(dplyr)
 
-estimates<- estimates %>% mutate(mixModelFitsBetter = pLRtest<.05)
+#lowEff <- estimates %>% filter(efficacy <= .1)
+
+lowE<- estimates %>%  group_by(subject) %>%
+  summarise(exclude = any(efficacy<.1) )
+
+#estimates<- estimates %>% mutate(mixModelFitsBetter = pLRtest<.05)
                        
-condtnVariableNames <- c("subject","stream", "orientation")  
+estimates<- merge(lowE,estimates) 
+estimates <- as_tibble(estimates)
 
-e<- estimates %>%  group_by(subject) %>%
-  summarise(nPassed = sum(mixModelFitsBetter)) 
-estimates<- merge(e,estimates) 
+toExclude <- unique((estimates %>% filter(exclude==TRUE))$subject)
+```
 
-estimates<- estimates %>% mutate( exclude = (nPassed==0)  )
+Num to exclude is `r length(toExclude)`
+```{r}
+write_tsv(estimates,path=file.path(resultsPath,'backwards2E1_paramEstimatesWithExcludeColumn.tsv'))
+
 ```
 
 
-Assess the size of the effect to inform Bayesian test of next experiment (probably use raw units)
+Assess the size of the effect 
 
 ```{r, echo=FALSE, message=FALSE}
 require(ggplot2)

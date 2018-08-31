@@ -1,1 +1,0 @@
-- Orientations are in an nTrials x numLetters matrix. Coded 0 or 1. 1 is rotated

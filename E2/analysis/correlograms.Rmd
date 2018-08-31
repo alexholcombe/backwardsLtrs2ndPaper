@@ -1,0 +1,125 @@
+---
+title: "correlograms"
+author: "Alex Holcombe"
+date: "2/27/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Need to calculate the SPE of the orientation error. Unfortunately, it's ambiguous. Therefore, I will have multiple variables: orient0reported, orientPlus1reported, etc.   
+And want to make a correlogram wherein 
+
+Read in data, parameter estimates
+
+```{r}
+dataPath <- file.path( "..","Data")
+#Created by exclusions.Rmd
+ff<- readRDS( file.path(dataPath, "backwards2E2_dataWithEstimatesAndExcludeColumn.rda") ) 
+ff<- as_tibble(ff)
+```
+
+First look before collapsing wihtin subjects
+```{r}
+#I think I need to put the data in wide form so that it counts each combinatino of SPEleft and SPE right
+#SPE<-data.table::dcast(ff %>% filter(exclude==FALSE), orientation+subject+targetSide~stream,
+#                       value.var="SPE") 
+SPE<-data.table::dcast(ff %>% filter(exclude==FALSE, numTargets==2), subject+trial~stream,
+                       value.var="SPE") 
+#Now get the counts so can plot heatmap
+SPEcount<- SPE %>% count(Left,Right)
+#plot that heatmap
+correl<- ggplot(SPEcount, aes(x = Left, y = Right)) + geom_tile(aes(fill = n)) # +  facet_grid(separation~.)
+correl
+
+#Zero in on center because most large SPEs are guesses
+#Plot with limits to zoom in
+correl + xlim(-2,2) + ylim(-2,2)
+
+```
+
+
+
+What was it for the first paper? For E1,`r P1E1canonical`  Canonical and 
+`r P1E1reversed` Mirror-reversed. Difference is `r P1E1canonical-P1E1reversed`
+. For E2, bias difference very similar at `r P1E2leftBiasDiff`.
+For E2 vertical arrangement, `r P1E2vertBiasDiff`
+
+
+
+Probably want to calculate a correlation within each subject.
+
+For correlogram
+
+Could use below to plot average SPE for each condition, but should probably make it from scratch
+```{r}
+estimates <- read_tsv("backwards2E2_paramEstimatesWithExcludeColumn.tsv")
+SPE<-data.table::dcast(estimates, orientation+subject+exclude+targetSide~stream,
+                       value.var="SPE") 
+```
+
+
+The below is copied from code I wrote for Cheryl
+
+
+#Calculate correlation
+cor.test(df$responsePosRelativeleft, df$responsePosRelativeright,
+         alternative = c("two.sided"),
+         method = c("pearson"),
+         exact = NULL, conf.level = 0.95, continuity = FALSE)
+
+smallSPEs <- df %>% filter(abs(responsePosRelativeleft) < maxSPE ) %>% filter( abs(responsePosRelativeright) < maxSPE )
+
+#ddply(smallSPEs, .(wordEcc), 
+near<- smallSPEs %>% filter( wordEcc==1 )
+far <- smallSPEs %>% filter( wordEcc > 1 )
+
+cor.test(smallSPEs$responsePosRelativeleft, smallSPEs$responsePosRelativeright,
+         alternative = c("two.sided"),
+         method = c("pearson"),
+         exact = NULL, conf.level = 0.95, continuity = FALSE)
+
+nearCorr<- cor.test(near$responsePosRelativeleft, near$responsePosRelativeright,
+                    alternative = c("two.sided"),
+                    method = c("pearson"),
+                    exact = NULL, conf.level = 0.95, continuity = FALSE)
+
+farCorr<- cor.test(far$responsePosRelativeleft, far$responsePosRelativeright,
+                   alternative = c("two.sided"),
+                   method = c("pearson"),
+                   exact = NULL, conf.level = 0.95, continuity = FALSE)
+
+subjectCorr <- dlply(df,.(filename), function(x) cor.test(x$responsePosRelativeleft, x$responsePosRelativeright,
+                                                          alternative = c("two.sided"),
+                                                          method = c("pearson"),
+                                                          exact = NULL, conf.level = 0.95, continuity = FALSE) )
+farSubjectCorr <- dlply(far,.(filename), function(x) cor.test(x$responsePosRelativeleft, x$responsePosRelativeright,
+                                                          alternative = c("two.sided"),
+                                                          method = c("pearson"),
+                                                          exact = NULL, conf.level = 0.95, continuity = FALSE) )
+nearSubjectCorr <- dlply(near,.(filename), function(x) cor.test(x$responsePosRelativeleft, x$responsePosRelativeright,
+                                                              alternative = c("two.sided"),
+                                                              method = c("pearson"),
+                                                              exact = NULL, conf.level = 0.95, continuity = FALSE) )
+
+
+
+
+#nearCorrs <- c(.0711,.5278,.2991,.1807,.4680,.3630,-.0264,.3778,.4048,.1536,.1868,.0261,.1062,.1441,.0160)
+#farCorrs <- c(-.2472,0,.2684,-.0428,.3736,-.0826,-.3119,-.0456,.1658,-.0603,-.2156,.0542,.1151,.1744,-.1492)
+#Participants <- c(12,13,14,15,16,17,22,23,24,25,26,27,28,32,34)
+#as.data.frame(allCorrData)
+#allCorrData <- cbind(Participants,nearCorrs,farCorrs)
+#t.test(nearCorrs,farCorrs, alternative = c("two.sided"), mu = 0, paired = FALSE, var.equal=FALSE, conf.level = 0.95)
+
+#To-do
+#Eliminate the five bad Ss [DONE!]
+#Do the correlation analysis on each S individually, and then do paired t-tests on the subject means 
+
+#ADVANCED
+#Address the argument that it wasn't correlated in the far just because of more guessing
+#  - Do simulation of same correlation but with more guesses to make sure it is still significant despite the differing guessing rates
+#Calculate for each subject and then do a t-test for near and far
+#Analyse the frequent bigrams and actual words separately.

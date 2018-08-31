@@ -15,9 +15,9 @@ Read in parameter estimates
 dataPath <- file.path( "..","Data")
 #Created by exclusions.Rmd
 data<- readRDS( file.path(dataPath, "backwards2E2_dataWithEstimatesAndExcludeColumn.rda") ) 
+library(tidyverse)
 data<- as_tibble(data)
 ```
-
 
 
 For inferential stats, don't care about individual trials, so extract parameter estimates from full tibble.
@@ -34,7 +34,24 @@ write_tsv(estimates, file.path(resultsPath,"backwards2E2_paramEstimatesWithExclu
 
 ```
 
-Plot data
+Plot data 1 target
+
+```{r, echo=FALSE, message=FALSE}
+require(ggplot2)
+require(papaja)
+require(Hmisc) #for mean_cl_boot
+
+hh<-ggplot(estimates %>% filter(targetSide!="both", exclude==FALSE), aes(x=stream, y=efficacy, color=orientation)) + 
+  geom_point(position = position_dodge(width = 0.1)) + stat_summary(fun.y="mean",geom="point",size=4, alpha=.5, position = position_dodge(width = 0.1)) + 
+  theme_apa() +ggtitle('after exclusions') + 
+  stat_summary(fun.data = mean_cl_boot, geom="errorbar", width=0.4, position = position_dodge(width = 0.1)) +
+  stat_summary(fun.y="mean",geom="line",aes(group=orientation))
+
+show(hh)
+
+```
+
+Plot data 2 targets
 
 ```{r, echo=FALSE, message=FALSE}
 require(ggplot2)
@@ -152,18 +169,6 @@ P1E2diff_se<-.038; P1E2diff_sd<- P1E2diff_se*sqrt(E2n)
 P1E2vdiff_se<- .047; P1E2vdiff_sd<- P1E2vdiff_se*sqrt(E2n)
 
 ```
-
-For correlogram
-```{r}
-SPE<-data.table::dcast(estimates, orientation+subject+exclude+targetSide~stream,
-                       value.var="SPE") 
-```
-
-
-What was it for the first paper? For E1,`r P1E1canonical`  Canonical and 
-`r P1E1reversed` Mirror-reversed. Difference is `r P1E1canonical-P1E1reversed`
-. For E2, bias difference very similar at `r P1E2leftBiasDiff`.
-For E2 vertical arrangement, `r P1E2vertBiasDiff`
 
 
 Do conventional stats.
