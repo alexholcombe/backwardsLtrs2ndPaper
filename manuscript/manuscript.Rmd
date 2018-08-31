@@ -33,6 +33,7 @@ bibliography      : ["referencesInfo/r-references.bib","referencesInfo/reference
 
 floatsintext      : no
 figurelist        : no
+figsintext        : yes
 tablelist         : no
 footnotelist      : no
 linenumbers       : yes
@@ -101,6 +102,8 @@ The analysis code and results are all online (https://github.com/alexholcombe/ba
 The results of Experiment 1 were very similar to those of @holcombe_implied_2017.
 
 ```{r, echo=FALSE, message=FALSE}
+require(readr); require(dplyr)
+estimates <- read_tsv(file.path("..","E1","Results",'backwards2E1_paramEstimatesWithExcludeColumn.tsv'))
 require(ggplot2)
 require(papaja)
 require(Hmisc) #for mean_cl_boot
@@ -110,9 +113,17 @@ gg<-ggplot(estimates %>% filter(exclude==FALSE),
           geom_point(position = position_dodge(width = dodg)) + 
   stat_summary(fun.y="mean",geom="point",size=8, alpha=.5, position = position_dodge(width = dodg)) +
   stat_summary(fun.data = mean_cl_boot, geom="errorbar", width=0.4, position = position_dodge(width = dodg)) +
-  theme_apa() +ggtitle('good')
+  theme_apa() 
 show(gg)
 ```
+
+apa_print() and apa_table() facilitate reporting results of your analyses. Take a look at the .Rmd of the example manuscript in the folder example and the resulting .pdf.
+
+Drop a supported analysis result, such as an htest- or lm-object, into apa_print() and receive a list of possible character strings that you can use to report the results of your analysis.
+
+my_lm <- lm(Sepal.Width ~ Sepal.Length + Petal.Width + Petal.Length, data = iris)
+apa_lm <- apa_print(my_lm)
+
 
 # Discussion
 
