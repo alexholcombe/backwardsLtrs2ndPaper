@@ -58,6 +58,19 @@ require(ggplot2)
 gg<-ggplot(estimates, aes(x=stream, y=efficacy)) + geom_point(color="grey") + stat_summary(fun.y="mean",geom="point",size=4, alpha=.5)
 show(gg)
 
+require(papaja)
+require(Hmisc) #for mean_cl_boot
+dodg = .3
+gg<-ggplot(estimates %>% filter(exclude==FALSE), 
+           aes(x=orientation, y=efficacy, color=stream)) + 
+          geom_point(position = position_dodge(width = dodg)) + 
+  stat_summary(fun.y="mean",geom="point",size=8, alpha=.5, position = position_dodge(width = dodg)) +
+  stat_summary(fun.data = mean_cl_boot, geom="errorbar", width=0.4, position = position_dodge(width = dodg)) +
+  theme_apa() +ggtitle('good')
+show(gg)
+
+```
+
 library(data.table)
 
 #The below works but drops many variables, so think about merging later

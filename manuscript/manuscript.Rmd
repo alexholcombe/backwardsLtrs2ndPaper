@@ -65,9 +65,9 @@ The hypotheses, stopping rule, and other details of both experiments was preregi
 For the first experiment, 
  https://osf.io/jdy8p/register/565fb3678c5e4a66b5582f67
 
-The experiment compares two within-subject levels of letter orientation (canonical or inverted), participants will experience both conditions within a single experimental session with the conditions presented in a mixed order. The method is almost exactly the same as that of Holcombe, Nguyen, & Goodbourn (in press). The only non-trivial difference is that in that experiment the two conditions were presented in separate blocks, whereas here they are mixed. This will allow us to determine whether simply seeing the backwards letters on an individual trial is sufficient to stop left-side prioritization, or whether having repeated successive trials of a particular condition is necessary. This speaks to how automatic the left-side prioritization observed in Holcombe et al. (in press) is.
+The experiment compares two within-subject levels of letter orientation (canonical or inverted), participants will experience both conditions within a single experimental session with the conditions presented in a mixed order. The method is almost exactly the same as that of Holcombe, Nguyen, & Goodbourn (in press). The only non-trivial difference is that in that experiment the two conditions were presented in separate blocks, whereas here they are mixed. This will allow us to determine whether simply seeing the backwards letters on an individual trial is sufficient to stop left-side prioritization, or whether having repeated successive trials of a particular condition is necessary. This speaks to how automatic the left-side prioritization observed in @holcombe_implied_2017 is.
 
-If the left-side prioritisation is caused by implied reading direction then the left side bias will be stronger for letters presented in canonical orientation compared to inverted letters. Based on the findings of Holcombe, Nguyen, & Goodbourn (in press), we predict that the left bias will be significantly stronger in canonical orientation than inverted.
+If the left-side prioritisation is caused by implied reading direction then the left side bias will be stronger for letters presented in canonical orientation compared to inverted letters. Based on the findings of @holcombe_implied_2017, we predict that the left bias will be significantly stronger in canonical orientation than inverted.
 We predict that latency and precision will not differ significantly between letter orientations
 
 
@@ -75,9 +75,12 @@ We predict that latency and precision will not differ significantly between lett
 
 We report how we determined our sample size, all data exclusions (if any), all manipulations, and all measures in the study. <!-- 21-word solution (Simmons, Nelson & Simonsohn, 2012; retrieved from http://ssrn.com/abstract=2160588) -->
 
+
+Visual stimuli were generated using MATLAB R2012b with Psychtoolbox-3 (Brainard, 1997; Kleiner, Brainard, & Pelli, 2007; Pelli, 1997) on a MacBook Pro and displayed on a Mitsubishi DiamondView touchscreen LCD monitor with a resolution of 1,024 x 768 pixels and nominal refresh rate of 56 Hz (Experiment 2)CHRISCHECK. The code was adapted from the code used in a previous publication [@holcombe_implied_2017] that was written by [Patrick Goodbourn](https://orcid.org/0000-0001-7899-7355).
+
 ### Participants
 
-Our original study (Holcombe, Nguyen, & Goodbourn, in press) of the effect of rotating the letters so they faced to the left yielded a large effect size of Cohen’s d = .94, which requires a sample size of only 14 to detect with 95% power. However, we expected that mixing the conditions within a block, as done here, might result in an effect size somewhat smaller, which led us to plan a sample size of 45 before exclusions (more details at the preregistration). 
+Our previous study [@holcombe_implied_2017] of the effect of rotating the letters so they faced to the left yielded a large effect size of Cohen’s d = .94, which requires a sample size of only 14 to detect with 95% power. However, we expected that mixing the conditions within a block, as done here, might result in an effect size somewhat smaller, which led us to plan a sample size of 45 before exclusions (more details at the preregistration). 
 
 Forty-five participants were run (XXX females).
 
@@ -85,20 +88,31 @@ Forty-five participants were run (XXX females).
 
 As planned, six participants whose efficacy in either RSVP stream in any condition was lower than 10% (as indicated by the mixture modeling code) were removed from data analysis to reduce floor effects.
 
-## Material
-
 ## Procedure
 
 Preregistration: https://osf.io/r327j/
 http://htmlpreview.github.io/?https://github.com/alexholcombe/backwardsLtrs2ndPaper/blob/master/E2/analysis/bayesianAnalysisForPrereg.html , which used our custom prior (details in statistical models section) and found that 75 participants would yield a decent Bayes Factor (about 10 or more) for the effect size we are expecting. 
 
-
-
 ## Data analysis
-We used `r cite_r("r-references.bib")` for all our analyses.
-
+The analysis code and results are all online (https://github.com/alexholcombe/backwardsLtrs2ndPaper). `r cite_r("referencesInfo/r-references.bib")` was used for the analyses.
 
 # Results
+
+The results of Experiment 1 were very similar to those of @holcombe_implied_2017.
+
+```{r, echo=FALSE, message=FALSE}
+require(ggplot2)
+require(papaja)
+require(Hmisc) #for mean_cl_boot
+dodg = .3
+gg<-ggplot(estimates %>% filter(exclude==FALSE), 
+           aes(x=orientation, y=efficacy, color=stream)) + 
+          geom_point(position = position_dodge(width = dodg)) + 
+  stat_summary(fun.y="mean",geom="point",size=8, alpha=.5, position = position_dodge(width = dodg)) +
+  stat_summary(fun.data = mean_cl_boot, geom="errorbar", width=0.4, position = position_dodge(width = dodg)) +
+  theme_apa() +ggtitle('good')
+show(gg)
+```
 
 # Discussion
 
