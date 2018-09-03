@@ -89,7 +89,7 @@ Forty-five participants were run (XXX females).
 
 As planned, six participants whose efficacy in either RSVP stream in any condition was lower than 10% (as indicated by the mixture modeling code) were removed from data analysis to reduce floor effects.
 
-## Procedure
+### Procedure
 
 Preregistration: https://osf.io/r327j/
 http://htmlpreview.github.io/?https://github.com/alexholcombe/backwardsLtrs2ndPaper/blob/master/E2/analysis/bayesianAnalysisForPrereg.html , which used our custom prior (details in statistical models section) and found that 75 participants would yield a decent Bayes Factor (about 10 or more) for the effect size we are expecting. 
@@ -97,11 +97,24 @@ http://htmlpreview.github.io/?https://github.com/alexholcombe/backwardsLtrs2ndPa
 ## Data analysis
 The analysis code and results are all online (https://github.com/alexholcombe/backwardsLtrs2ndPaper). `r cite_r("referencesInfo/r-references.bib")` was used for the analyses.
 
+### Mixture modeling
+In a traditional analyses of performance in cued , the dependent variable would simply be accuracy at reporting the cued letter, for the left and for the right stream. However, that simple analysis can conceal differences in the dynamics of target selection from the streams [@vul_temporal_2008]. To address this, we developed mixture modeling [@goodbourn_pseudoextinction:_2015], which accommodates the possibility that in different conditions or with different streams, the latency of selection or temporal variability of selection may vary together with or separately from the rate of success of selecting a letter.
+
+To perform mixture modeling, the data are coded as *serial position errors*. On each trial, for each stream, the participant chooses a letter from the choice array presented at the end of the trial. All the letters in the choice array were in fact presented, but they occurred in a random order. Thus, the letter presented can be expressed as a serial position error. The serial position error is 0 if the letter in the ring cue is reported. The serial position is -1 if the letter presented just before the cue is reported. It is +2 if the letter reported was that presented two after the cue And so on.
+
+A histogram of the temporal errors forms a prominent hill whose peak is around the time of the cue (it almost always peaks at the time of the cue or one letter after). In addition, there is a "floor" to the histogram which formed by both very large and small errors, which appears to conform to the shape predicted by the participant making a random guess or not perceiving the target letter.
+
+The mixture modeling code [@R-mixRSVP] fits the temporal error distribution with a combination of a Gaussian distribution (capturing the hill) and the guessing distribution. A maximum likelihood procedure finds the proportion of trials that can be attributed to the Gaussian, as opposed to the guessing distribution, and finds the best-fitting parameters ($\mu$, $\sigma$). Overall, then, we have the proportion of trials in which participants likely reported a letter around the time of the target, which we call *efficacy*, and the latency ($\mu$) and precision ($\sigma$).
+
 # Results
 
 The results of Experiment 1 were very similar to those of @holcombe_implied_2017.
-
-```{r, echo=FALSE, message=FALSE}
+<!-- (ref:my-figure-caption)
+This is a figure caption for my figure.
+fig.cap = "(ref:my-figure-caption)"
+-->
+<!-- fig.cap style fig captions example here: https://osf.io/ujwvr/?show=revision-->
+```{r, fig.cap="Efficacy of ", echo=FALSE, message=FALSE}
 require(readr); require(dplyr)
 estimates <- read_tsv(file.path("..","E1","Results",'backwards2E1_paramEstimatesWithExcludeColumn.tsv'))
 require(ggplot2)
@@ -116,6 +129,47 @@ gg<-ggplot(estimates %>% filter(exclude==FALSE),
   theme_apa() 
 show(gg)
 ```
+
+```{r, ttestEffE1}
+if(!require(BayesFactor)){install.packages('BayesFactor')}
+library(BayesFactor)
+
+leftCanon <- estimates %>% filter(exclude==FALSE,orientation=="Canonical",stream=="Left")
+rightCanon <- estimates %>% filter(exclude==FALSE,orientation=="Canonical",stream=="Right")
+leftInverted<-estimates %>% filter(exclude==FALSE,orientation=="Inverted",stream=="Left")
+rightInverted<-estimates %>% filter(exclude==FALSE,orientation=="Inverted",stream=="Right")
+
+bb<- BayesFactor::ttestBF(leftCanon$efficacy,rightCanon$efficacy)
+
+```
+
+As seen in Figure 1, when the text was canonically oriented, efficacy for the left stream (`r round(mean(leftCanon$efficacy),2)` ± `r round(sd(leftCanon$efficacy),2)` was much higher than for the right stream (`r round(mean(rightCanon$efficacy),2)` ± `r round(sd(rightCanon$efficacy),2)`), but when the text was inverted, efficacy for the left stream (`r round(mean(leftInverted$efficacy),2)` ± `r round(sd(leftInverted$efficacy),2)` was lower than for the right stream (`r round(mean(rightInverted$efficacy),2)` ± `r round(sd(rightInverted$efficacy),2)`)
+
+
+efficacy was lower for the left stream () than for the right stream ().
+
+"A total of 3 paired samples t-test will be conducted on left bias score (calculations below), latency and precision. All 3 t-tests will enter letter orientation (canonical vs inverted) as the independent variable."
+
+Despite success at reporting the cued letter from the right stream occurring at a much lower rate
+
+PLOT LEFT BIAS, will plot only these from now on.
+
+```{r, fig.cap="Left bias", echo=FALSE, message=FALSE}
+
+gg<-ggplot(estimates %>% filter(exclude==FALSE), 
+           aes(x=orientation, y=efficacy, color=stream)) + 
+          geom_point(position = position_dodge(width = dodg)) + 
+  stat_summary(fun.y="mean",geom="point",size=8, alpha=.5, position = position_dodge(width = dodg)) +
+  stat_summary(fun.data = mean_cl_boot, geom="errorbar", width=0.4, position = position_dodge(width = dodg)) +
+  theme_apa() 
+show(gg)
+```
+
+apa_print()
+
+As declared in the preregistration subsequent analyses will use "left bias" as the dependent variable, which is efficacy (or other dependent variable, such as latency) for the left stream minus that for the right stream.
+
+A total of 3 paired samples t-test will be conducted on left bias score (calculations below), latency and precision. All 3 t-tests will enter letter orientation (canonical vs inverted) as the independent variable.
 
 apa_print() and apa_table() facilitate reporting results of your analyses. Take a look at the .Rmd of the example manuscript in the folder example and the resulting .pdf.
 
