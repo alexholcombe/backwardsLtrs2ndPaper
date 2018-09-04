@@ -66,7 +66,7 @@ The hypotheses, stopping rule, and other details of both experiments was preregi
 For the first experiment, 
  https://osf.io/jdy8p/register/565fb3678c5e4a66b5582f67
 
-The experiment compares two within-subject levels of letter orientation (canonical or inverted), participants will experience both conditions within a single experimental session with the conditions presented in a mixed order. The method is almost exactly the same as that of Holcombe, Nguyen, & Goodbourn (in press). The only non-trivial difference is that in that experiment the two conditions were presented in separate blocks, whereas here they are mixed. This will allow us to determine whether simply seeing the backwards letters on an individual trial is sufficient to stop left-side prioritization, or whether having repeated successive trials of a particular condition is necessary. This speaks to how automatic the left-side prioritization observed in @holcombe_implied_2017 is.
+The experiment compares two within-subject levels of letter orientation (canonical or inverted), participants will experience both conditions within a single experimental session with the conditions presented in a mixed order. The method is almost exactly the same as that of [@holcombe_implied_2017]. The only non-trivial difference is that in that experiment the two conditions were presented in separate blocks, whereas here they are mixed. This will allow us to determine whether simply seeing the backwards letters on an individual trial is sufficient to stop left-side prioritization, or whether having repeated successive trials of a particular condition is necessary. This speaks to how automatic the left-side prioritization observed in @holcombe_implied_2017 is.
 
 If the left-side prioritisation is caused by implied reading direction then the left side bias will be stronger for letters presented in canonical orientation compared to inverted letters. Based on the findings of @holcombe_implied_2017, we predict that the left bias will be significantly stronger in canonical orientation than inverted.
 We predict that latency and precision will not differ significantly between letter orientations
@@ -85,20 +85,21 @@ Our previous study [@holcombe_implied_2017] of the effect of rotating the letter
 
 Forty-five participants were run (XXX females).
 
+
+
 ### Exclusions
 
 As planned, six participants whose efficacy in either RSVP stream in any condition was lower than 10% (as indicated by the mixture modeling code) were removed from data analysis to reduce floor effects.
 
 ### Procedure
 
-Preregistration: https://osf.io/r327j/
-http://htmlpreview.github.io/?https://github.com/alexholcombe/backwardsLtrs2ndPaper/blob/master/E2/analysis/bayesianAnalysisForPrereg.html , which used our custom prior (details in statistical models section) and found that 75 participants would yield a decent Bayes Factor (about 10 or more) for the effect size we are expecting. 
+The letters in both streams were presented at a rate of 10 per second (66 ms presentation and 33 ms interstimulus interval). The two target letters, which were simultaneous, were surrounded by white cue rings of .1 deg thickness and 5 deg diameter. The screen was viewed from a distance of approximately 57 cm.
 
 ## Data analysis
 The analysis code and results are all online (https://github.com/alexholcombe/backwardsLtrs2ndPaper). `r cite_r("referencesInfo/r-references.bib")` was used for the analyses.
 
 ### Mixture modeling
-In a traditional analyses of performance in cued , the dependent variable would simply be accuracy at reporting the cued letter, for the left and for the right stream. However, that simple analysis can conceal differences in the dynamics of target selection from the streams [@vul_temporal_2008]. To address this, we developed mixture modeling [@goodbourn_pseudoextinction:_2015], which accommodates the possibility that in different conditions or with different streams, the latency of selection or temporal variability of selection may vary together with or separately from the rate of success of selecting a letter.
+In a traditional analyses of performance in cued , the dependent variable would simply be accuracy at reporting the cued letter, for the left and for the right stream. However, that simple analysis can conceal differences in the dynamics of target selection from the streams [@vul_temporal_2008]. To address this, we developed mixture modeling [@goodbourn_pseudoextinction2015], which accommodates the possibility that in different conditions or with different streams, the latency of selection or temporal variability of selection may vary together with or separately from the rate of success of selecting a letter.
 
 To perform mixture modeling, the data are coded as *serial position errors*. On each trial, for each stream, the participant chooses a letter from the choice array presented at the end of the trial. All the letters in the choice array were in fact presented, but they occurred in a random order. Thus, the letter presented can be expressed as a serial position error. The serial position error is 0 if the letter in the ring cue is reported. The serial position is -1 if the letter presented just before the cue is reported. It is +2 if the letter reported was that presented two after the cue And so on.
 
@@ -139,14 +140,39 @@ rightCanon <- estimates %>% filter(exclude==FALSE,orientation=="Canonical",strea
 leftInverted<-estimates %>% filter(exclude==FALSE,orientation=="Inverted",stream=="Left")
 rightInverted<-estimates %>% filter(exclude==FALSE,orientation=="Inverted",stream=="Right")
 
-bb<- BayesFactor::ttestBF(leftCanon$efficacy,rightCanon$efficacy)
-
+bb<- BayesFactor::ttestBF(leftCanon$efficacy-rightCanon$efficacy,
+                          leftInverted$efficacy-rightInverted$efficacy)
+latexReport<- (apa_print(bb)$statistic)[[1]]
 ```
 
-As seen in Figure 1, when the text was canonically oriented, efficacy for the left stream (`r round(mean(leftCanon$efficacy),2)` ± `r round(sd(leftCanon$efficacy),2)` was much higher than for the right stream (`r round(mean(rightCanon$efficacy),2)` ± `r round(sd(rightCanon$efficacy),2)`), but when the text was inverted, efficacy for the left stream (`r round(mean(leftInverted$efficacy),2)` ± `r round(sd(leftInverted$efficacy),2)` was lower than for the right stream (`r round(mean(rightInverted$efficacy),2)` ± `r round(sd(rightInverted$efficacy),2)`)
+As seen in Figure 1, when the text was canonically oriented, efficacy for the left stream (`r round(mean(leftCanon$efficacy),2)` ± `r round(sd(leftCanon$efficacy),2)`) was markedly higher than for the right stream (`r round(mean(rightCanon$efficacy),2)` ± `r round(sd(rightCanon$efficacy),2)`), but when the text was inverted, efficacy for the left stream (`r round(mean(leftInverted$efficacy),2)` ± `r round(sd(leftInverted$efficacy),2)`) was lower than for the right stream (`r round(mean(rightInverted$efficacy),2)` ± `r round(sd(rightInverted$efficacy),2)`).
+
+For our primary statistical analyses (as preregistered), we use "left bias" as the dependent variable. Here, there is very strong evidence, `r latexReport`, that the left bias is greater in the canonical condition (`r mean(leftCanon$efficacy - rightCanon$efficacy)`  ± `r sd(leftCanon$efficacy - rightCanon$efficacy)`) than in the inverted condition (`r mean(leftInverted$efficacy - rightInverted$efficacy)`  ± `r sd(leftInverted$efficacy - rightInverted$efficacy)`).
 
 
-efficacy was lower for the left stream () than for the right stream ().
+```{r latencyPrecision}
+bflLR<- ttestBF(leftCanon$latency,rightCanon$latency)
+latexReportBflLR<- (apa_print(bflLR)$statistic)[[1]]
+bflLRinvert<- ttestBF(leftInverted$latency,rightInverted$latency)
+latexReportBflLRinvert<- (apa_print(bflLRinvert)$statistic)[[1]]
+
+bfl<- ttestBF(leftCanon$latency - rightCanon$latency, leftInverted$latency - rightInverted$latency)
+latexReportBfl<- (apa_print(bfl)$statistic)[[1]]
+bfp<- ttestBF(leftCanon$precision - rightCanon$precision, leftInverted$precision - rightInverted$precision)
+latexReportBfp<- (apa_print(bfp)$statistic)[[1]]
+```
+
+The latency and precision were similar in all four conditions (canonical, left = `r round(mean(leftCanon$latency)*100)` ms, right = `r round(mean(rightCanon$latency)*100)` ms; inverted, left = `r round(mean(leftInverted$latency)*100)` ms, right = `r round(mean(rightInverted$latency)*100)` ms) such that the Bayes Factor t-test supported the null hypothesis of no difference between left and right in both the canonical (`r latexReportBflLR`) and inverted conditions (`r latexReportBflLRinvert`).
+
+canonical left stream: `r mean(leftCanon$latency)*100`
+`r mean(rightCanon$latency)*100`
+inverted left stream: `r mean(leftInverted$latency)*100`
+`r mean(rightInverted$latency)*100`
+
+
+`r latexReportBfl`
+
+leftCanon$latency
 
 "A total of 3 paired samples t-test will be conducted on left bias score (calculations below), latency and precision. All 3 t-tests will enter letter orientation (canonical vs inverted) as the independent variable."
 
@@ -175,15 +201,21 @@ apa_print() and apa_table() facilitate reporting results of your analyses. Take 
 
 Drop a supported analysis result, such as an htest- or lm-object, into apa_print() and receive a list of possible character strings that you can use to report the results of your analysis.
 
-my_lm <- lm(Sepal.Width ~ Sepal.Length + Petal.Width + Petal.Length, data = iris)
-apa_lm <- apa_print(my_lm)
-
 
 # Discussion
 
 # Experiment 2
 
 ## Method
+
+Only differences from Experiment 1 are described below.
+
+### Procedure
+
+The letters in both streams were presented at a slightly slower rate than in Experiment 1, at 8 per second (80 ms presentation and 40 ms interstimulus interval). 
+
+Preregistration: https://osf.io/r327j/
+http://htmlpreview.github.io/?https://github.com/alexholcombe/backwardsLtrs2ndPaper/blob/master/E2/analysis/bayesianAnalysisForPrereg.html , which used our custom prior (details in statistical models section) and found that 75 participants would yield a decent Bayes Factor (about 10 or more) for the effect size we are expecting. 
 
 ### Exclusions
 

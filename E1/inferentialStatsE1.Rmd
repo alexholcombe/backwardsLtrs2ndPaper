@@ -71,6 +71,8 @@ show(gg)
 
 ```
 
+Get 
+```{r}
 library(data.table)
 
 #The below works but drops many variables, so think about merging later
