@@ -147,7 +147,7 @@ latexReport<- (apa_print(bb)$statistic)[[1]]
 
 As seen in Figure 1, when the text was canonically oriented, efficacy for the left stream (`r round(mean(leftCanon$efficacy),2)` ± `r round(sd(leftCanon$efficacy),2)`) was markedly higher than for the right stream (`r round(mean(rightCanon$efficacy),2)` ± `r round(sd(rightCanon$efficacy),2)`), but when the text was inverted, efficacy for the left stream (`r round(mean(leftInverted$efficacy),2)` ± `r round(sd(leftInverted$efficacy),2)`) was lower than for the right stream (`r round(mean(rightInverted$efficacy),2)` ± `r round(sd(rightInverted$efficacy),2)`).
 
-For our primary statistical analyses (as preregistered), we use "left bias" as the dependent variable. Here, there is very strong evidence, `r latexReport`, that the left bias is greater in the canonical condition (`r mean(leftCanon$efficacy - rightCanon$efficacy)`  ± `r sd(leftCanon$efficacy - rightCanon$efficacy)`) than in the inverted condition (`r mean(leftInverted$efficacy - rightInverted$efficacy)`  ± `r sd(leftInverted$efficacy - rightInverted$efficacy)`).
+For our primary statistical analyses (as preregistered), we use "left bias" as the dependent variable. The evidence here is very strong, `r latexReport`, that the left bias is greater in the canonical condition (`r mean(leftCanon$efficacy - rightCanon$efficacy)`  ± `r sd(leftCanon$efficacy - rightCanon$efficacy)`) than in the inverted condition (`r mean(leftInverted$efficacy - rightInverted$efficacy)`  ± `r sd(leftInverted$efficacy - rightInverted$efficacy)`).
 
 
 ```{r latencyPrecision}
@@ -160,49 +160,19 @@ bfl<- ttestBF(leftCanon$latency - rightCanon$latency, leftInverted$latency - rig
 latexReportBfl<- (apa_print(bfl)$statistic)[[1]]
 bfp<- ttestBF(leftCanon$precision - rightCanon$precision, leftInverted$precision - rightInverted$precision)
 latexReportBfp<- (apa_print(bfp)$statistic)[[1]]
+
 ```
 
-The latency and precision were similar in all four conditions (canonical, left = `r round(mean(leftCanon$latency)*100)` ms, right = `r round(mean(rightCanon$latency)*100)` ms; inverted, left = `r round(mean(leftInverted$latency)*100)` ms, right = `r round(mean(rightInverted$latency)*100)` ms) such that the Bayes Factor t-test supported the null hypothesis of no difference between left and right in both the canonical (`r latexReportBflLR`) and inverted conditions (`r latexReportBflLRinvert`).
-
-canonical left stream: `r mean(leftCanon$latency)*100`
-`r mean(rightCanon$latency)*100`
-inverted left stream: `r mean(leftInverted$latency)*100`
-`r mean(rightInverted$latency)*100`
-
-
-`r latexReportBfl`
-
-leftCanon$latency
-
-"A total of 3 paired samples t-test will be conducted on left bias score (calculations below), latency and precision. All 3 t-tests will enter letter orientation (canonical vs inverted) as the independent variable."
-
-Despite success at reporting the cued letter from the right stream occurring at a much lower rate
-
-PLOT LEFT BIAS, will plot only these from now on.
-
-```{r, fig.cap="Left bias", echo=FALSE, message=FALSE}
-
-gg<-ggplot(estimates %>% filter(exclude==FALSE), 
-           aes(x=orientation, y=efficacy, color=stream)) + 
-          geom_point(position = position_dodge(width = dodg)) + 
-  stat_summary(fun.y="mean",geom="point",size=8, alpha=.5, position = position_dodge(width = dodg)) +
-  stat_summary(fun.data = mean_cl_boot, geom="errorbar", width=0.4, position = position_dodge(width = dodg)) +
-  theme_apa() 
-show(gg)
-```
-
-apa_print()
-
-As declared in the preregistration subsequent analyses will use "left bias" as the dependent variable, which is efficacy (or other dependent variable, such as latency) for the left stream minus that for the right stream.
-
-A total of 3 paired samples t-test will be conducted on left bias score (calculations below), latency and precision. All 3 t-tests will enter letter orientation (canonical vs inverted) as the independent variable.
-
-apa_print() and apa_table() facilitate reporting results of your analyses. Take a look at the .Rmd of the example manuscript in the folder example and the resulting .pdf.
-
-Drop a supported analysis result, such as an htest- or lm-object, into apa_print() and receive a list of possible character strings that you can use to report the results of your analysis.
-
+The latency and precision were similar in all four conditions, such that the Bayesian t-test supported the null hypothesis of no difference between left and right in both conditions (canonical: `r latexReportBflLR`, inverted: `r latexReportBflLRinvert`). The latency values are:
+canonical, left = `r round(mean(leftCanon$latency)*100)` ms, right = `r round(mean(rightCanon$latency)*100)` ms; inverted, left = `r round(mean(leftInverted$latency)*100)` ms, right = `r round(mean(rightInverted$latency)*100)` ms, and the precision values are: canonical, left = `r round(mean(leftCanon$precision)*100)` ms, right = `r round(mean(rightCanon$precision)*100)`; inverted, left = `r round(mean(leftInverted$precision)*100)`, right = `r round(mean(rightInverted$precision)*100)`. Thus, there was no support for the hypothesis of a difference between the left biases for the canonical and the inverted conditions, for latency (`r latexReportBfl`) or for precision (`r latexReportBfp`.
 
 # Discussion
+
+Experiment 1 replicated the usual [@goodbourn_pseudoextinction2015; @holcombe_implied_2017; @ransley_reading_2018] dissociation between the efficacy and the dynamics of selection as indexed by latency and precision. That is, despite spatial biases in efficacy, there was no spatial bias in the latency and precision. This suggests that the reason for the poor performance on the right in the canonical condition, and on the left in the inverted condition, was not due to a delay in attentional selection or failure to allocate attention on one side. It may instead be due to a post-selection processing failure. Perhaps a post-selection process has a severe capacity limitation, resulting in strong competition between the two letters.  
+The novelty here was that the particular letter orientation (canonical or inverted) was chosen randomly on each trial. In previous work, trials with the same orientation were blocked, and it was unknown whether this was necessary. It might have been the case that multiple successive trials with the same orientation are required before the reading direction bias was set up in the mind.
+
+
+
 
 # Experiment 2
 
