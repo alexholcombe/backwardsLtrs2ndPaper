@@ -59,6 +59,24 @@ knitr::opts_chunk$set(cache.extra = knitr::rand_seed)
 
 As you read these words, early visual stages process the letters and words in parallel. But at a later stage, letters may need to be selected by attention to be fully processed [@reichle_serial-attention_2011; @treisman_feature_1980]. This transition to limited-capacity processing has recently been studied with a task requiring identification of simultaneously-presented letters embedded in a longer stream. Performance is markedly worse for identifying two letters rather than one. Although the task bears little resemblance to natural reading, implicit reading direction based on the letters' orientation nevertheless can determine which letter is poorly reported. This might be a result of word recognition processes rapidly and automatically extracting allocentric or object-relative reference frames. Alternatively, prioritisation based on implicit reading order (a left bias, for canonically-oriented letters) may not occur without a repeated regularity, such as the same orientation being used on multiple trials. In previous investigations, the trials were blocked, with all letters in the stream having the same orientation. Here, we first showed strong reading-order prioritization when trial order was random. Second, we found that when each frame within the stream had a random orientation, the bias was no longer affected by letter orientation, and defaulted to a left bias. Analysis of the errors supports the theory that the two streams of letters are sampled simultaneously, and a high-level process prioritizes one stream for consolidation into memory. 
 
+## Prioritization and coordinate frames
+
+What causes the letter on one side to be accurately identified more often than the letter on the other side? An answer to this should have two parts. One part should be an account of which processing stages the letter on one side gains an advantage, as well as the nature of those processing stages. The answer must also explain what causes the particular side that is prioritized to be the side that is prioritized. The present experiments were designed to provide insight into the second question.
+One possibility is that the prioritization emerges after repeated trials of a particular orientation. This is the "gradual emergence" possibility.
+
+could in principle reflect the slow emergence of a cognitive strategy, albeit one that does not  
+
+the left side, say, to be prioritized rather than the right side.
+
+prioritization to occ
+
+A mental coordinate system must be used to allocate resources differentially to two locations, as a location can only be defined relative to a coordinate frame. To favor the first letter as defined by implicit reading direction, the mind must recognize the orientation of the letters and determine which of the two letters is on the left (for the canonical orientation) or which on the right (for the mirror-reversed or inverted condition). Studies of brain-injured patients have revealed aspects of how such relative spatial loca- tions are represented.
+Among patients with parietal neglect, some neglect the left visual field, some neglect the left half of each word, and some neglect the first part of each word, even if the letters are mirror- reversed so that the first part of the word is to the right (Haywood & Coltheart, 2001; Hillis et al., 2005). The reference frame thought to underpin the last phenomenon is sometimes referred to as object-centered or word-centered (Caramazza & Hillis, 1990). Conceivably, it could be critical to the implicit reading-direction bias documented in the present experiments: If the two letters acted like a single word, the word-centered frame would represent the location of the first letter that can then be prioritized for processing. Although some scheme for calculating the first letter is clearly needed, we deem it unlikely that it is the same as that used to represent a word. We give our reasons here.
+The present experiments used widely separated letters, which did not appear to form a single word or even a group. Moreover, the present finding of a very large advantage for the first letter relative to the last letter is not a typical characteristic of individual- word processing. Although the literature on individual-word rec- ognition does show that the first letters of a word are more informative than the last, the effect is not as large as the left advantage in our dual-RSVP paradigm (e.g., Blais et al., 2009). The RSVP literature does not seem to note a particularly large advantage either. In pilot experiments with a single RSVP stream of four-letter words (rather than two RSVP streams of individual letters), we have not observed a large advantage for the first two letters. Thus, it appears that the bias toward the first letter in our experiments does not reflect a word-centered processing frame and may be unrelated to the processes that yield word-centered neglect and normal word identification.
+Although two letters within a word may be processed in parallel (Ans, Carbonnel, & Valdois, 1998; Blais et al., 2009; Coltheart, Rastle, Perry, Langdon, & Ziegler, 2001; Davis, 2010; Perry, Ziegler, & Zorzi, 2007; cf. Whitney & Cornelissen, 2008), some evidence indicates that widely spaced letters are identified serially (Cohen, Dehaene, Vinckier, Jobert, & Montavont, 2008; Risko, Lanthier, & Besner, 2011). This serial processing may be a char- acteristic of the extraction of spatial relationships between arbi- trary objects as well as letters. In particular, attentional shifts between objects may be critical to extracting the spatial relation- ship between them (Franconeri, Scimeca, Roth, Helseth, & Kahn, 2012; Holcombe, Linares, & Vaziri-Pashkam, 2011). Our laresults suggest that the two target letters are sampled in parallel, but a subsequent stage may process them serially. Reading expe- rience may have led to this learned visual routine (Ullman, 1984) of beginning with the first letter according to letter orientation. Training monkeys on spatial-relationship judgments can result in parietal neurons tuned to relative location for the trained stimuli (Olson, 2003). Such neurons may be involved in coding the relative location of the letters, in combination with task-related (reading) top-down signals (Filimon, 2015).
+
+## The present studies
+
 The hypotheses, stopping rule, and other details of both experiments was preregistered (E1: https://osf.io/jdy8p/register/565fb3678c5e4a66b5582f67; E2: )
 
 # Experiment 1
@@ -166,15 +184,23 @@ latexReportBfp<- (apa_print(bfp)$statistic)[[1]]
 The latency and precision were similar in all four conditions, such that the Bayesian t-test supported the null hypothesis of no difference between left and right in both conditions (canonical: `r latexReportBflLR`, inverted: `r latexReportBflLRinvert`). The latency values are:
 canonical, left = `r round(mean(leftCanon$latency)*100)` ms, right = `r round(mean(rightCanon$latency)*100)` ms; inverted, left = `r round(mean(leftInverted$latency)*100)` ms, right = `r round(mean(rightInverted$latency)*100)` ms, and the precision values are: canonical, left = `r round(mean(leftCanon$precision)*100)` ms, right = `r round(mean(rightCanon$precision)*100)`; inverted, left = `r round(mean(leftInverted$precision)*100)`, right = `r round(mean(rightInverted$precision)*100)`. Thus, there was no support for the hypothesis of a difference between the left biases for the canonical and the inverted conditions, for latency (`r latexReportBfl`) or for precision (`r latexReportBfp`.
 
+ANALYZE THE EFFECT OF RESPONSE ORDER
+
+ANALYZE THE EFFECT OF A RUN OF TRIALS, USING PERCENT CORRECT
+
 # Discussion
 
 Experiment 1 replicated the usual [@goodbourn_pseudoextinction2015; @holcombe_implied_2017; @ransley_reading_2018] dissociation between the efficacy and the dynamics of selection as indexed by latency and precision. That is, despite spatial biases in efficacy, there was no spatial bias in the latency and precision. This suggests that the reason for the poor performance on the right in the canonical condition, and on the left in the inverted condition, was not due to a delay in attentional selection or failure to allocate attention on one side. It may instead be due to a post-selection processing failure. Perhaps a post-selection process has a severe capacity limitation, resulting in strong competition between the two letters.  
 The novelty here was that the particular letter orientation (canonical or inverted) was chosen randomly on each trial. In previous work, trials with the same orientation were blocked, and it was unknown whether this was necessary. It might have been the case that multiple successive trials with the same orientation are required before the reading direction bias was set up in the mind.
-
-
-
+In Experiment 2 we further probed the necessary conditions for the reading direction bias.
 
 # Experiment 2
+
+LOOK UP IRINA'S AND CORBALLIS' PAPERS ON ORIENTAITON, SEE IF THEY SAY ANYTHING ABOUT REFERENCE FRAMES.
+One 
+
+Kim in her thesis says "spatial bias on early versus late trials on each block) showed little effect,"
+COULD OPTIONALLY INCLUDE AN EXPERIMENT 3, JUST REPORTING THE PSYC1 CANONICAL VERSUS INVERTED TO SHOW IT DOESN'T NEED AN RSVP STREAM
 
 ## Method
 
@@ -191,6 +217,8 @@ http://htmlpreview.github.io/?https://github.com/alexholcombe/backwardsLtrs2ndPa
 
 In the prereg, we wrote: "
 Participants will be excluded if their average efficacy is below 10% in both streams in either the upright or the reversed orientation), or if the likelihood ratio test testing whether the data is fit better by the mixture model than by the guessing distribution fails (is not less than p<.05) for three or four of the four conditions. Because the Gaussian component of the mixture model is constrained to only allow latencies between -4 and 4, one effect of this is to eliminate participants who consistently do not report a letter near the time of the ring, instead for example reporting one of the last few items in the stream, which the data of past experiments indicates that rare participants do."
+
+## Results
 
 
 \newpage
