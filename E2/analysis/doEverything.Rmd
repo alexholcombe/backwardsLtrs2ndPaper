@@ -5,6 +5,8 @@ date: "`r format(Sys.time(), '%d %B, %Y')`"
 output: html_document
 ---
 
+## Experiment 2
+
 The idea of this document is to have a single file that when knit does everything, [calling subsidiary Rmd documents](https://stackoverflow.com/questions/41962434/source-code-from-rmd-file-within-another-rmd)
 
 But the problem is, the importE2data.Rmd throws a bizarre error when knit, but not when run!

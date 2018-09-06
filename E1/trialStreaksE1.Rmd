@@ -84,73 +84,92 @@ print(lags %>% select(-exclude,-stream))
 ```
 
 But need to do this for every condition. And want to do it after have brought together left stream and right stream correct, so can plot the autocorrelation for the left bias.
+Look for where I did percent correct
 
-# Use tq_mutate() to get lags 1:28 using lag.xts()
+Try to bring left and right stream onto same row, so can calculate left bias on individual trials. 
+```{r}
+library(data.table)
+
+lr <- data.table::dcast(df, subject+trial+orientation~stream,value.var="SPE")
+as_tibble(lr)
+```
+
+```{r}
+lr<- lr %>% mutate(orientCI = ifelse(orientation=="Canonical",1,-1))
+
+#tidyquant functions search for and key off a date or POSIXct column. 
+#So, need to convert trial to that.
+lr <- lr %>% mutate(trialDate = as_date(trial))
+
 k <- 1:4
 col_names <- paste0("lag_", k)
 
-toyEx <- dfd %>% select(trialDate,orientation)  
-
-tidyverse_lags <- toyEx %>% slice(1:10) %>%
-    tidyquant::tq_mutate(
-        select     = orientation,
-        mutate_fun = lag.xts,
-        k          = 1:4,
-        col_rename = col_names
-    )
-
-toyExn<- toyEx %>% mutate(orientCI = ifelse(orientation=="Canonical",1,-1))
-
-lags <- toyExn %>% slice(1:10) %>%
+lags <- lr %>% slice(1:10) %>%
     tidyquant::tq_mutate(
         select     = orientCI,
         mutate_fun = lag.xts,
         k          = 1:4,
         col_rename = col_names
     )
-#It looks like I need to do this separately for each subject
-#Try just one subject
-toyy <- toyExn %>% filter(subject==
+print(lags )
 
-tidyverse_lags <- dfd %>%
-    tidyquant::tq_mutate(
-        select     = orientation,
-        mutate_fun = lag.xts,
-        k          = 1:28,
-        col_rename = col_names
-    )
-    
 ```
 
 
-Assess the size of the effect 
-
-Get 
+Calculate left bias for each trial
 ```{r}
-library(data.table)
+lags$leftBias <- lags$Left - lags$Right
 
-#The below works but drops many variables, so think about merging later
-eff<- data.table::dcast(estimates, orientation+subject~stream,value.var="efficacy")
-eff$dv<-"efficacy"
-lat<-data.table::dcast(estimates, orientation+subject~stream,value.var="latency") 
-lat$dv<-"latency"
-pre<-data.table::dcast(estimates, orientation+subject~stream,value.var="precision") 
-pre$dv<-"precision"
-all<-rbind(eff,lat,pre)
-#I tried to do the above with a single command but makes an error even though StackOverflow example works
-#https://stackoverflow.com/questions/37332076/from-long-to-wide-data-with-multiple-columns/37332345
-# data.table::dcast(estimates, orientation+subject+nPassed~stream,value.var=c("efficacy","latency"))
-head(eff)
+```
+Calculate autocorrelation
+
+First, we need to correlate each of the lags to the “leftBias” column. This involves a few steps that can be strung together in a dplyr pipe (%>%):
+
+The goal is to get orientCI and each lag side-by-side so we can do a correlation. To do this we use gather() to pivot each of the lagged columns into a “tidy” (long format) data frame, and we exclude “package”, “date”, and “count” columns from the pivot.
+
+```{r}
+# Calculate the autocorrelations and 95% cutoffs
+lr_autocorr <- lags %>%
+    gather(key = "lag", value = "lag_value", -c(subject, trialDate,leftBias, orientation,trial)) %>%
+    mutate(lag = str_sub(lag, start = 5) %>% as.numeric) %>%
+    group_by(subject, lag) %>%
+    summarize(
+        cor = cor(x = leftBias, y = lag_value, use = "pairwise.complete.obs"),
+        cutoff_upper = 2/(n())^0.5,
+        cutoff_lower = -2/(n())^0.5
+        )
+lr_autocorr
 ```
 
 
-Calculate bias
+Now that we have the correlations calculated by package and lag number in a nice “tidy” format, we can visualize the autocorrelations
+
 ```{r , fig.height=20, fig.width=5}
-all$leftBias<- all$Left - all$Right
-hh<-ggplot(all, aes(x=orientation, y=leftBias)) + facet_grid(.~dv) + geom_point(color="grey") + stat_summary(fun.y="mean",geom="point",size=4, alpha=.5)
-hh<-hh+stat_summary(fun.data="mean_cl_boot",geom="errorbar",width=.3,conf.int=.95,
-                  width=5,size=1) 
-show(hh)
+lr_autocorr %>%
+    ggplot(aes(x = lag, y = cor, color = subject, group = subject)) +
+    # Add horizontal line a y=0
+    geom_hline(yintercept = 0) +
+    # Plot autocorrelations
+    geom_point(size = 2) +
+    geom_segment(aes(xend = lag, yend = 0), size = 1) +
+    # Add cutoffs
+    geom_line(aes(y = cutoff_upper), color = "blue", linetype = 2) +
+    geom_line(aes(y = cutoff_lower), color = "blue", linetype = 2) +
+    # Add facets
+    facet_wrap(~ subject, ncol = 3) +
+    # Aesthetics
+    expand_limits(y = c(-1, 1)) +
+    scale_color_tq() +
+    theme_tq() +
+    labs(
+        title = paste0("Tidyverse ACF Plot: Lags ", rlang::expr_text(k)),
+        subtitle = "Appears to be a weekly pattern",
+        x = "Lags"
+    ) +
+    theme(
+        legend.position = "none",
+        axis.text.x = element_text(angle = 45, hjust = 1)
+    )
 ```
 
 Print effect size
