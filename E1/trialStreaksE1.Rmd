@@ -94,17 +94,18 @@ lr <- data.table::dcast(df, subject+trial+orientation~stream,value.var="SPE")
 as_tibble(lr)
 ```
 
+
 ```{r}
 lr<- lr %>% mutate(orientCI = ifelse(orientation=="Canonical",1,-1))
 
 #tidyquant functions search for and key off a date or POSIXct column. 
 #So, need to convert trial to that.
 lr <- lr %>% mutate(trialDate = as_date(trial))
-
+lr<- as_tibble(lr)
 k <- 1:4
 col_names <- paste0("lag_", k)
 
-lags <- lr %>% slice(1:10) %>%
+lags <- lr %>% group_by(subject) %>%
     tidyquant::tq_mutate(
         select     = orientCI,
         mutate_fun = lag.xts,
@@ -115,12 +116,12 @@ print(lags )
 
 ```
 
-
 Calculate left bias for each trial
 ```{r}
 lags$leftBias <- lags$Left - lags$Right
 
 ```
+
 Calculate autocorrelation
 
 First, we need to correlate each of the lags to the “leftBias” column. This involves a few steps that can be strung together in a dplyr pipe (%>%):
@@ -144,7 +145,7 @@ lr_autocorr
 
 Now that we have the correlations calculated by package and lag number in a nice “tidy” format, we can visualize the autocorrelations
 
-```{r , fig.height=20, fig.width=5}
+```{r , fig.height=5, fig.width=5}
 lr_autocorr %>%
     ggplot(aes(x = lag, y = cor, color = subject, group = subject)) +
     # Add horizontal line a y=0
@@ -156,14 +157,15 @@ lr_autocorr %>%
     geom_line(aes(y = cutoff_upper), color = "blue", linetype = 2) +
     geom_line(aes(y = cutoff_lower), color = "blue", linetype = 2) +
     # Add facets
-    facet_wrap(~ subject, ncol = 3) +
+    #facet_wrap(~ subject, ncol = 3) +
     # Aesthetics
-    expand_limits(y = c(-1, 1)) +
-    scale_color_tq() +
+    expand_limits(y = c(-.5, .5)) +
+    #scale_color_tq() +
+    stat_summary(fun.y="mean",geom="line") + #,aes(group=orientation))
     theme_tq() +
     labs(
-        title = paste0("Tidyverse ACF Plot: Lags ", rlang::expr_text(k)),
-        subtitle = "Appears to be a weekly pattern",
+        title = paste0("autocorrelation: Lags ", rlang::expr_text(k)),
+        subtitle = "Appears to have no pattern",
         x = "Lags"
     ) +
     theme(
@@ -172,14 +174,12 @@ lr_autocorr %>%
     )
 ```
 
-Print effect size
+
+Collapse across subjects.
+
+
 ```{r}
-leftBiasesCanonical<- filter(all,dv=="efficacy" & orientation=="Canonical")$leftBias
-leftBiasCanonical <- mean( leftBiasesCanonical )
-leftBiasesInverted<- filter(all,dv=="efficacy" & orientation=="Inverted")$leftBias
-leftBiasInverted<- mean(   leftBiasesInverted  )
-leftBiasDiff<- leftBiasCanonical - leftBiasInverted
-leftBias_sd <- sd(   leftBiasesCanonical - leftBiasesInverted )
+lr_autocorr %>% group_by(lag) %>% summarise(cor=mean(cor))
 ```
 
 The leftBiasDiff for this experiment is `r leftBiasDiff` or in Cohen's d `leftBiasDiff / leftBias_sd`, very healthy.
