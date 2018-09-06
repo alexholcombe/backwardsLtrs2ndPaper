@@ -1,0 +1,242 @@
+---
+title: "trialStreaks"
+author: "Alex Holcombe"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Goal
+
+For each trial (row of the tibble), find the n-1, n-2, n-3 trial etc., put its orientation into a new column called neg1orient, neg2orient, etc.  Then can filter by whether they equal the current orientation, and analyze left bias with percent correct the dependent variable.
+
+## Implementation
+
+One could make a new grouping column that is trialnum / 4 that would group together every 4 trials. That would analyze only every 4 trials, which would avoid the problem of correlated trials, but would not provide a running streak assessment. 
+
+rolling window calculations, autocorrelation
+from: http://www.business-science.io/timeseries-analysis/2017/08/30/tidy-timeseries-analysis-pt-4.html
+"apply tq_mutate() using the lag.xts function. We can provide column names for the new columns by prefixing “lag_” to the lag numbers, k, which the sequence from 1 to 28. The output is all of the lags for each package."
+
+## Statistical issues
+Did van der Burg or any of them address statistical independence? Alais' latest paper does not, so probably they never did.
+
+```{r load data, echo=FALSE, message=FALSE}
+library(tidyverse)
+
+#Import raw data
+dataPath<- file.path("Data/")
+#Experiment was administered by MATLAB
+#.mat file been preprocessed into melted long dataframe by importE1data.Rmd
+data<- readRDS( file.path(dataPath, "backwards2E1_rawDataFromMAT.rda") ) 
+
+#to work with dplyr, can't have array field like letterSeq
+data$letterSeq<- NULL
+
+#tidy data
+df<- as_tibble(data)
+
+```
+
+I want only raw data, not estimates, but need to get exclude column from estimates to screen out excluded Ss
+```{r, echo=FALSE}
+library(readr)
+resultsPath <- file.path("Results")
+estimates<- readr::read_tsv(file=file.path(resultsPath,"backwards2E1_paramEstimatesWithExcludeColumn.tsv"))
+```
+Determine Ss to exclude and join to raw data
+```{r, echo=FALSE}
+#I don't remember what the excluded column is that's already there, but it excludes more Ss than we want
+excludeOrNot <- estimates %>% group_by(subject) %>% summarise(exclude = last(exclude))
+
+#Join with raw data
+df<- as_tibble( merge(excludeOrNot,df) )
+ #join
+```
+
+[This post](http://www.business-science.io/timeseries-analysis/2017/08/30/tidy-timeseries-analysis-pt-4.html) covers autocorrelation.
+
+Demonstrate I can calculate lags with tiny subset of data
+```{r}
+library(tidyquant)
+#tidyquant functions search for and key off a date or POSIXct column. 
+#So, need to convert trial to that.
+dfd <- df %>% mutate(trialDate = as_date(trial))
+#remove some crud so easier to view
+dfd<- dfd %>% select(-allRTs,-respSP,-resp,-targetSP,-excluded)
+#Critical column (orientation) must be numeric
+toyExn<- dfd %>% mutate(orientCI = ifelse(orientation=="Canonical",1,-1))
+
+k <- 1:4
+col_names <- paste0("lag_", k)
+
+lags <- toyExn %>% slice(1:10) %>%
+    tidyquant::tq_mutate(
+        select     = orientCI,
+        mutate_fun = lag.xts,
+        k          = 1:4,
+        col_rename = col_names
+    )
+print(lags %>% select(-exclude,-stream))
+```
+
+But need to do this for every condition. And want to do it after have brought together left stream and right stream correct, so can plot the autocorrelation for the left bias.
+
+# Use tq_mutate() to get lags 1:28 using lag.xts()
+k <- 1:4
+col_names <- paste0("lag_", k)
+
+toyEx <- dfd %>% select(trialDate,orientation)  
+
+tidyverse_lags <- toyEx %>% slice(1:10) %>%
+    tidyquant::tq_mutate(
+        select     = orientation,
+        mutate_fun = lag.xts,
+        k          = 1:4,
+        col_rename = col_names
+    )
+
+toyExn<- toyEx %>% mutate(orientCI = ifelse(orientation=="Canonical",1,-1))
+
+lags <- toyExn %>% slice(1:10) %>%
+    tidyquant::tq_mutate(
+        select     = orientCI,
+        mutate_fun = lag.xts,
+        k          = 1:4,
+        col_rename = col_names
+    )
+#It looks like I need to do this separately for each subject
+#Try just one subject
+toyy <- toyExn %>% filter(subject==
+
+tidyverse_lags <- dfd %>%
+    tidyquant::tq_mutate(
+        select     = orientation,
+        mutate_fun = lag.xts,
+        k          = 1:28,
+        col_rename = col_names
+    )
+    
+```
+
+
+Assess the size of the effect 
+
+Get 
+```{r}
+library(data.table)
+
+#The below works but drops many variables, so think about merging later
+eff<- data.table::dcast(estimates, orientation+subject~stream,value.var="efficacy")
+eff$dv<-"efficacy"
+lat<-data.table::dcast(estimates, orientation+subject~stream,value.var="latency") 
+lat$dv<-"latency"
+pre<-data.table::dcast(estimates, orientation+subject~stream,value.var="precision") 
+pre$dv<-"precision"
+all<-rbind(eff,lat,pre)
+#I tried to do the above with a single command but makes an error even though StackOverflow example works
+#https://stackoverflow.com/questions/37332076/from-long-to-wide-data-with-multiple-columns/37332345
+# data.table::dcast(estimates, orientation+subject+nPassed~stream,value.var=c("efficacy","latency"))
+head(eff)
+```
+
+
+Calculate bias
+```{r , fig.height=20, fig.width=5}
+all$leftBias<- all$Left - all$Right
+hh<-ggplot(all, aes(x=orientation, y=leftBias)) + facet_grid(.~dv) + geom_point(color="grey") + stat_summary(fun.y="mean",geom="point",size=4, alpha=.5)
+hh<-hh+stat_summary(fun.data="mean_cl_boot",geom="errorbar",width=.3,conf.int=.95,
+                  width=5,size=1) 
+show(hh)
+```
+
+Print effect size
+```{r}
+leftBiasesCanonical<- filter(all,dv=="efficacy" & orientation=="Canonical")$leftBias
+leftBiasCanonical <- mean( leftBiasesCanonical )
+leftBiasesInverted<- filter(all,dv=="efficacy" & orientation=="Inverted")$leftBias
+leftBiasInverted<- mean(   leftBiasesInverted  )
+leftBiasDiff<- leftBiasCanonical - leftBiasInverted
+leftBias_sd <- sd(   leftBiasesCanonical - leftBiasesInverted )
+```
+
+The leftBiasDiff for this experiment is `r leftBiasDiff` or in Cohen's d `leftBiasDiff / leftBias_sd`, very healthy.
+
+
+```{r, echo=FALSE}
+E1n<- 16
+#Raw effect size plus standard error and sd
+P1E1canonical=.23;  P1E1c_se = .058; P1E1c_sd = P1E1c_se * sqrt(E1n)
+P1E1reversed= .062;  P1E1r_se = .07; P1E1r_sd = P1E1r_se * sqrt(E1n)
+#To calculate sd of the bias diff, consider that the variances sum,
+#therefore first sum the variances then convert back to standard deviation
+#Although only true for *independent* random variables and these unlikely to be totally independent
+P1E1diff_sdCalculated = sqrt( (P1E1c_sd^2 + P1E1r_sd^2) )  #.257
+
+E2n<- 24
+P1E2canonical=.218; P1E2c_se =.034; P1E2c_sd= P1E2c_se * sqrt(E2n)
+P1E2inverted=.017; P1E2i_se =.049; P1E2i_sd = P1E2i_se * sqrt(E2n)
+P1E2diff_sdCalculated = sqrt( (P1E2c_sd^2 + P1E2i_sd^2) ) #.2066
+
+P1E2vertUpright=.188; P1E2vu_se=.043; P1E2vu_sd = P1E2vu_se * sqrt(E2n)
+P1E2vertInverted= -.07; P1E2vi_se=.049; P1E2vi_sd = P1E2vi_se * sqrt(E2n)
+P1E2vdiff_sdCalculated = sqrt( (P1E2vi_sd^2 + P1E2vu_sd^2) )
+
+P1E1leftBiasDiff<- P1E1canonical-P1E1reversed
+P1E2leftBiasDiff<- P1E2canonical - P1E2inverted
+P1E2vertBiasDiff<- P1E2vertUpright - P1E2vertInverted
+#reported as  .258 +/- .047 in the paper
+
+#The diff standard errors are also available from the paper directly. But still need to 
+#convert to SD to get Cohen's d.
+
+P1E1diff_se<-.07; P1E1diff_sd<- P1E1diff_se*sqrt(E2n) 
+P1E2diff_se<-.038; P1E2diff_sd<- P1E2diff_se*sqrt(E2n) 
+P1E2vdiff_se<- .047; P1E2vdiff_sd<- P1E2vdiff_se*sqrt(E2n)
+
+```
+
+What was it for the first paper? For E1,`r P1E1canonical`  Canonical and 
+`r P1E1reversed` Mirror-reversed. Difference is `r P1E1canonical-P1E1reversed`
+. For E2, bias difference very similar at `r P1E2leftBiasDiff`.
+For E2 vertical arrangement, `r P1E2vertBiasDiff`
+
+
+Do conventional stats.
+```{r}
+
+require(ez)
+
+aa <- ezANOVA(data=filter(all,dv=="efficacy"), dv=leftBias, within=orientation, wid=subject)
+cat("F=", aa$ANOVA$F, " p=", aa$ANOVA$p, "\n", sep="")
+
+```
+
+Do Bayesian t-test. That is, take the likelihood of the left bias difference observed under the prior and divide it by the likelihood of the left bias difference observed under the null.
+
+Use the default Bayes test (but for E2 will use a custom prior)
+
+```{r, echo=FALSE}
+if(!require(BayesFactor)){install.packages('BayesFactor')}
+library(BayesFactor)
+
+leftBiasDifferences<- leftBiasesCanonical - leftBiasesInverted
+
+ttestResults<- ttestBF( leftBiasDifferences )
+
+```
+
+
+The Bayes factor from a one-sample default Bayes t-test for the leftBiasDifferences is `r ttestResults@bayesFactor$bf`
+
+The full results are 
+```r 
+print(ttestResults)
+```
+
+A custom prior would provide more power, as detailed in bayesianAnalysisForPrereg.Rmd in E2 folder
+
+Do the correlogram and correlation
