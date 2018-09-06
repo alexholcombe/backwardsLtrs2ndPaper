@@ -96,6 +96,7 @@ as_tibble(lr)
 
 
 ```{r}
+lr <- lr %>% filter(excludeOrNot==FALSE)
 lr<- lr %>% mutate(orientCI = ifelse(orientation=="Canonical",1,-1))
 
 #tidyquant functions search for and key off a date or POSIXct column. 
@@ -174,6 +175,30 @@ lr_autocorr %>%
     )
 ```
 
+Use stat_summary to average across Ss in plot
+
+```{r , fig.height=5, fig.width=5}
+lr_autocorr %>% 
+    ggplot(aes(x = lag, y = cor)) +
+    # Add horizontal line a y=0
+    geom_hline(yintercept = 0) +
+    # Plot autocorrelations
+stat_summary(fun.y="mean",geom="point",size=4) + 
+  ggtitle('after exclusions') + 
+  stat_summary(fun.data = mean_cl_boot, geom="errorbar", width=0.4) +
+    # Add facets
+    #facet_wrap(~ subject, ncol = 3) +
+    # Aesthetics
+    expand_limits(y = c(-.1, .1)) +
+    #scale_color_tq() +
+    stat_summary(fun.y="mean",geom="line") + #,aes(group=orientation))
+    theme_tq() +
+    xlab("Lag") + ylab('Correlation of leftBias with orientation of trial lag in past')
+    theme(
+        legend.position = "none",
+        axis.text.x = element_text(angle = 45, hjust = 1)
+    )
+```
 
 Collapse across subjects.
 
