@@ -65,15 +65,17 @@ library(tidyquant)
 #tidyquant functions search for and key off a date or POSIXct column. 
 #So, need to convert trial to that.
 dfd <- df %>% mutate(trialDate = as_date(trial))
+dfd <- dfd %>% filter(exclude==FALSE)
+
 #remove some crud so easier to view
 dfd<- dfd %>% select(-allRTs,-respSP,-resp,-targetSP,-excluded)
 #Critical column (orientation) must be numeric
-toyExn<- dfd %>% mutate(orientCI = ifelse(orientation=="Canonical",1,-1))
+dfe<- dfd %>% mutate(orientCI = ifelse(orientation=="Canonical",1,-1))
 
 k <- 1:4
 col_names <- paste0("lag_", k)
 
-lags <- toyExn %>% slice(1:10) %>%
+lags <- dfe %>% slice(1:10) %>%
     tidyquant::tq_mutate(
         select     = orientCI,
         mutate_fun = lag.xts,
@@ -91,26 +93,25 @@ Try to bring left and right stream onto same row, so can calculate left bias on 
 library(data.table)
 
 lr <- data.table::dcast(df, subject+trial+orientation~stream,value.var="SPE")
-as_tibble(lr)
+lr<-as_tibble(lr)
 ```
 
 
 ```{r}
-lr <- lr %>% filter(excludeOrNot==FALSE)
 lr<- lr %>% mutate(orientCI = ifelse(orientation=="Canonical",1,-1))
 
 #tidyquant functions search for and key off a date or POSIXct column. 
 #So, need to convert trial to that.
 lr <- lr %>% mutate(trialDate = as_date(trial))
 lr<- as_tibble(lr)
-k <- 1:4
+k <- 0:4
 col_names <- paste0("lag_", k)
 
 lags <- lr %>% group_by(subject) %>%
     tidyquant::tq_mutate(
         select     = orientCI,
         mutate_fun = lag.xts,
-        k          = 1:4,
+        k          = k,
         col_rename = col_names
     )
 print(lags )
@@ -119,8 +120,18 @@ print(lags )
 
 Calculate left bias for each trial
 ```{r}
-lags$leftBias <- lags$Left - lags$Right
+lags<- lags %>% mutate(leftApproxCorr = abs(Left)<2, rightApproxCorr = abs(Right)<2 )
+lags$leftApproxCorr <- as.numeric(lags$leftApproxCorr)
+lags$rightApproxCorr <- as.numeric(lags$rightApproxCorr)
 
+lags$leftBias <- lags$leftApproxCorr - lags$rightApproxCorr
+```
+
+Correlation of leftBias with orientation on this trial is pretty small (`r cor(lags$orientCI,lags$leftBias)` )
+
+Calculate correlation with left performance instead of left bias
+```{r}
+cor(lags$orientCI, lags$leftApproxCorr)
 ```
 
 Calculate autocorrelation
@@ -132,7 +143,7 @@ The goal is to get orientCI and each lag side-by-side so we can do a correlation
 ```{r}
 # Calculate the autocorrelations and 95% cutoffs
 lr_autocorr <- lags %>%
-    gather(key = "lag", value = "lag_value", -c(subject, trialDate,leftBias, orientation,trial)) %>%
+    gather(key = "lag", value = "lag_value", -c(subject, trialDate,leftBias, orientation,trial,Left,Right,leftApproxCorr,rightApproxCorr)) %>%
     mutate(lag = str_sub(lag, start = 5) %>% as.numeric) %>%
     group_by(subject, lag) %>%
     summarize(
@@ -152,23 +163,19 @@ lr_autocorr %>%
     # Add horizontal line a y=0
     geom_hline(yintercept = 0) +
     # Plot autocorrelations
-    geom_point(size = 2) +
-    geom_segment(aes(xend = lag, yend = 0), size = 1) +
-    # Add cutoffs
-    geom_line(aes(y = cutoff_upper), color = "blue", linetype = 2) +
-    geom_line(aes(y = cutoff_lower), color = "blue", linetype = 2) +
+    geom_point(size = .5) +
+      stat_summary(fun.y="mean",geom="line") + #,aes(group=orientation))
+   # geom_segment(aes(xend = lag, yend = 0), size = 1) +
+    # Plot summaries
+stat_summary(fun.y="mean",geom="point",size=4, aes(group="abc"),color="black") + 
+  stat_summary(fun.data = mean_cl_boot, geom="errorbar",  aes(group="abc"), width=0.4, color="black") +  
     # Add facets
     #facet_wrap(~ subject, ncol = 3) +
     # Aesthetics
     expand_limits(y = c(-.5, .5)) +
     #scale_color_tq() +
-    stat_summary(fun.y="mean",geom="line") + #,aes(group=orientation))
+    xlab("Lag") + ylab('Correlation of leftBias with orientation of previous trial')+
     theme_tq() +
-    labs(
-        title = paste0("autocorrelation: Lags ", rlang::expr_text(k)),
-        subtitle = "Appears to have no pattern",
-        x = "Lags"
-    ) +
     theme(
         legend.position = "none",
         axis.text.x = element_text(angle = 45, hjust = 1)
@@ -177,23 +184,23 @@ lr_autocorr %>%
 
 Use stat_summary to average across Ss in plot
 
-```{r , fig.height=5, fig.width=5}
+```{r }
 lr_autocorr %>% 
     ggplot(aes(x = lag, y = cor)) +
     # Add horizontal line a y=0
     geom_hline(yintercept = 0) +
     # Plot autocorrelations
 stat_summary(fun.y="mean",geom="point",size=4) + 
-  ggtitle('after exclusions') + 
   stat_summary(fun.data = mean_cl_boot, geom="errorbar", width=0.4) +
     # Add facets
     #facet_wrap(~ subject, ncol = 3) +
     # Aesthetics
     expand_limits(y = c(-.1, .1)) +
+  ggtitle('Autocorrelation') + 
     #scale_color_tq() +
     stat_summary(fun.y="mean",geom="line") + #,aes(group=orientation))
     theme_tq() +
-    xlab("Lag") + ylab('Correlation of leftBias with orientation of trial lag in past')
+    xlab("Lag") + ylab('Correlation of leftBias with orientation of previous trial')
     theme(
         legend.position = "none",
         axis.text.x = element_text(angle = 45, hjust = 1)
