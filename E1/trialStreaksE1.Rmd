@@ -157,7 +157,8 @@ lr_autocorr
 
 Now that we have the correlations calculated by package and lag number in a nice “tidy” format, we can visualize the autocorrelations
 
-```{r , fig.height=5, fig.width=5}
+```{r , fig.height=5, fig.width=7}
+library('papaja')
 lr_autocorr %>%
     ggplot(aes(x = lag, y = cor, color = subject, group = subject)) +
     # Add horizontal line a y=0
@@ -169,17 +170,17 @@ lr_autocorr %>%
     # Plot summaries
 stat_summary(fun.y="mean",geom="point",size=4, aes(group="abc"),color="black") + 
   stat_summary(fun.data = mean_cl_boot, geom="errorbar",  aes(group="abc"), width=0.4, color="black") +  
+      stat_summary(fun.y="mean",geom="line",aes(group="abc"),color="black",size=1) + 
     # Add facets
     #facet_wrap(~ subject, ncol = 3) +
     # Aesthetics
     expand_limits(y = c(-.5, .5)) +
+   theme(legend.position = "none") +
     #scale_color_tq() +
-    xlab("Lag") + ylab('Correlation of leftBias with orientation of previous trial')+
-    theme_tq() +
-    theme(
-        legend.position = "none",
-        axis.text.x = element_text(angle = 45, hjust = 1)
-    )
+    xlab("Lag") + ylab('Correlation of leftBias with orientation')+
+  ggtitle('Correlation of left bias with this trial orientation\n and previous trial orientations') + theme_apa()
+
+ggsave(file.path("Results","Plots","autocorrE1.png"))
 ```
 
 Use stat_summary to average across Ss in plot
@@ -207,87 +208,33 @@ stat_summary(fun.y="mean",geom="point",size=4) +
     )
 ```
 
-Collapse across subjects.
-
+Collapse across subjects so can potentially report exact values of correlations.
 
 ```{r}
 lr_autocorr %>% group_by(lag) %>% summarise(cor=mean(cor))
 ```
 
-The leftBiasDiff for this experiment is `r leftBiasDiff` or in Cohen's d `leftBiasDiff / leftBias_sd`, very healthy.
+In case of nonlinearities, compare streaks of 3 in a row to everything else.
 
-
-```{r, echo=FALSE}
-E1n<- 16
-#Raw effect size plus standard error and sd
-P1E1canonical=.23;  P1E1c_se = .058; P1E1c_sd = P1E1c_se * sqrt(E1n)
-P1E1reversed= .062;  P1E1r_se = .07; P1E1r_sd = P1E1r_se * sqrt(E1n)
-#To calculate sd of the bias diff, consider that the variances sum,
-#therefore first sum the variances then convert back to standard deviation
-#Although only true for *independent* random variables and these unlikely to be totally independent
-P1E1diff_sdCalculated = sqrt( (P1E1c_sd^2 + P1E1r_sd^2) )  #.257
-
-E2n<- 24
-P1E2canonical=.218; P1E2c_se =.034; P1E2c_sd= P1E2c_se * sqrt(E2n)
-P1E2inverted=.017; P1E2i_se =.049; P1E2i_sd = P1E2i_se * sqrt(E2n)
-P1E2diff_sdCalculated = sqrt( (P1E2c_sd^2 + P1E2i_sd^2) ) #.2066
-
-P1E2vertUpright=.188; P1E2vu_se=.043; P1E2vu_sd = P1E2vu_se * sqrt(E2n)
-P1E2vertInverted= -.07; P1E2vi_se=.049; P1E2vi_sd = P1E2vi_se * sqrt(E2n)
-P1E2vdiff_sdCalculated = sqrt( (P1E2vi_sd^2 + P1E2vu_sd^2) )
-
-P1E1leftBiasDiff<- P1E1canonical-P1E1reversed
-P1E2leftBiasDiff<- P1E2canonical - P1E2inverted
-P1E2vertBiasDiff<- P1E2vertUpright - P1E2vertInverted
-#reported as  .258 +/- .047 in the paper
-
-#The diff standard errors are also available from the paper directly. But still need to 
-#convert to SD to get Cohen's d.
-
-P1E1diff_se<-.07; P1E1diff_sd<- P1E1diff_se*sqrt(E2n) 
-P1E2diff_se<-.038; P1E2diff_sd<- P1E2diff_se*sqrt(E2n) 
-P1E2vdiff_se<- .047; P1E2vdiff_sd<- P1E2vdiff_se*sqrt(E2n)
-
-```
-
-What was it for the first paper? For E1,`r P1E1canonical`  Canonical and 
-`r P1E1reversed` Mirror-reversed. Difference is `r P1E1canonical-P1E1reversed`
-. For E2, bias difference very similar at `r P1E2leftBiasDiff`.
-For E2 vertical arrangement, `r P1E2vertBiasDiff`
-
-
-Do conventional stats.
 ```{r}
-
-require(ez)
-
-aa <- ezANOVA(data=filter(all,dv=="efficacy"), dv=leftBias, within=orientation, wid=subject)
-cat("F=", aa$ANOVA$F, " p=", aa$ANOVA$p, "\n", sep="")
-
+lagss<- lags %>% mutate(streak5 = (lag_0==lag_1) & (lag_1==lag_2) & (lag_2==lag_3) & (lag_3==lag_4))
+lagss<- lagss %>% mutate(streak4 = (lag_0==lag_1) & (lag_1==lag_2) & (lag_2==lag_3))
+table(lagss$streak4)
+table(lagss$streak5)
 ```
 
-Do Bayesian t-test. That is, take the likelihood of the left bias difference observed under the prior and divide it by the likelihood of the left bias difference observed under the null.
+Plot left bias for streak versus not, grouped by orientation.
 
-Use the default Bayes test (but for E2 will use a custom prior)
-
-```{r, echo=FALSE}
-if(!require(BayesFactor)){install.packages('BayesFactor')}
-library(BayesFactor)
-
-leftBiasDifferences<- leftBiasesCanonical - leftBiasesInverted
-
-ttestResults<- ttestBF( leftBiasDifferences )
-
+First collapse trials to calculate average within subject.
+```{r, plotstreak}
+lagavg <- lagss %>% filter(!is.na(streak4)) %>% 
+                  group_by(subject,orientation,streak4) %>%
+                summarise(leftBias = mean(leftBias))
 ```
 
-
-The Bayes factor from a one-sample default Bayes t-test for the leftBiasDifferences is `r ttestResults@bayesFactor$bf`
-
-The full results are 
-```r 
-print(ttestResults)
+```{r, plotstreak}
+ggplot(lagss, aes(x=orientation,y=leftBias,color=streak4)) +
+  stat_summary(fun.y="mean",geom="point") +
+  theme_apa()
 ```
 
-A custom prior would provide more power, as detailed in bayesianAnalysisForPrereg.Rmd in E2 folder
-
-Do the correlogram and correlation
