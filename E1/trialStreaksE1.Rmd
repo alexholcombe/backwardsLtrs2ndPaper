@@ -17,12 +17,12 @@ For each trial (row of the tibble), find the n-1, n-2, n-3 trial etc., put its o
 
 One could make a new grouping column that is trialnum / 4 that would group together every 4 trials. That would analyze only every 4 trials, which would avoid the problem of correlated trials, but would not provide a running streak assessment. 
 
-rolling window calculations, autocorrelation
+autocorrelation
 from: http://www.business-science.io/timeseries-analysis/2017/08/30/tidy-timeseries-analysis-pt-4.html
 "apply tq_mutate() using the lag.xts function. We can provide column names for the new columns by prefixing “lag_” to the lag numbers, k, which the sequence from 1 to 28. The output is all of the lags for each package."
 
 ## Statistical issues
-Did van der Burg or any of them address statistical independence? Alais' latest paper does not, so probably they never did.
+Did van der Burg or any of them address statistical independence? Alais' latest paper does not, so probably they never did. John Cass says they do it all in Excel.
 
 ```{r load data, echo=FALSE, message=FALSE}
 library(tidyverse)
@@ -159,13 +159,14 @@ Now that we have the correlations calculated by package and lag number in a nice
 
 ```{r , fig.height=5, fig.width=7}
 library('papaja')
+alph<-.5
 lr_autocorr %>%
     ggplot(aes(x = lag, y = cor, color = subject, group = subject)) +
     # Add horizontal line a y=0
     geom_hline(yintercept = 0) +
     # Plot autocorrelations
-    geom_point(size = .5) +
-      stat_summary(fun.y="mean",geom="line") + #,aes(group=orientation))
+    geom_point(size = .5, alpha=alph) +
+      stat_summary(fun.y="mean",geom="line",alpha=alph) + #,aes(group=orientation))
    # geom_segment(aes(xend = lag, yend = 0), size = 1) +
     # Plot summaries
 stat_summary(fun.y="mean",geom="point",size=4, aes(group="abc"),color="black") + 
@@ -178,7 +179,8 @@ stat_summary(fun.y="mean",geom="point",size=4, aes(group="abc"),color="black") +
    theme(legend.position = "none") +
     #scale_color_tq() +
     xlab("Lag") + ylab('Correlation of leftBias with orientation')+
-  ggtitle('Correlation of left bias with this trial orientation\n and previous trial orientations') + theme_apa()
+  #ggtitle('Correlation of left bias with this trial orientation\n and previous trial orientations') +
+  theme_apa()
 
 ggsave(file.path("Results","Plots","autocorrE1.png"))
 ```
@@ -232,9 +234,26 @@ lagavg <- lagss %>% filter(!is.na(streak4)) %>%
                 summarise(leftBias = mean(leftBias))
 ```
 
+Do the Bayesian t-test comparing the biases when it's a streak versus not.
 ```{r, plotstreak}
-ggplot(lagss, aes(x=orientation,y=leftBias,color=streak4)) +
-  stat_summary(fun.y="mean",geom="point") +
+require(BayesFactor)
+streak<- lagavg %>% filter(streak4==TRUE)
+notStreak<- lagavg %>% filter(streak4==FALSE)
+bb<- BayesFactor::ttestBF(streak$leftBias, notStreak$leftBias)
+latexReport<- (apa_print(bb)$statistic)[[1]]
+cat(latexReport, file=file.path("Results","streakBayesfactor.txt")) #to be read in by manuscript.Rmd
+```
+
+
+Then plot. Nothing happening.
+```{r, plotstreak}
+dodg = .3
+ggplot(lagavg, aes(x=orientation,y=leftBias,color=streak4)) +
+  #stat_summary(fun.y="mean",geom="point") +
+      geom_hline(yintercept = 0) +
+          geom_point(position = position_dodge(width = dodg)) + 
+  stat_summary(fun.y="mean",geom="point",size=8, alpha=.5, position = position_dodge(width = dodg)) +
+  stat_summary(fun.data = mean_cl_boot, geom="errorbar", width=0.4, position = position_dodge(width = dodg)) +
   theme_apa()
 ```
 

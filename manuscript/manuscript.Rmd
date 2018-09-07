@@ -133,7 +133,10 @@ This is a figure caption for my figure.
 fig.cap = "(ref:my-figure-caption)"
 -->
 <!-- fig.cap style fig captions example here: https://osf.io/ujwvr/?show=revision-->
-```{r, fig.cap="Efficacy of ", echo=FALSE, message=FALSE}
+
+(ref:effE1) Efficacy of . 
+
+```{r, fig.cap='(ref:effE1)', echo=FALSE, message=FALSE}
 require(readr); require(dplyr)
 estimates <- read_tsv(file.path("..","E1","Results",'backwards2E1_paramEstimatesWithExcludeColumn.tsv'))
 require(ggplot2)
@@ -186,7 +189,28 @@ canonical, left = `r round(mean(leftCanon$latency)*100)` ms, right = `r round(me
 
 ANALYZE THE EFFECT OF RESPONSE ORDER
 
-ANALYZE THE EFFECT OF A RUN OF TRIALS, USING PERCENT CORRECT
+## No effect of previous trials
+
+Many perceptual phenomena are subject to serial dependencies. To investigate if that is the case here, we assessed whether the left bias on a trial is affected only by the orientation of the letters on that trial, or is instead also affected by the orientation of the letters on previou trials. Mixture modeling could not be used to calculate a left bias for an individual trial, so instead of efficacy we used "approximately correct", which was also used for certain purposes in previous papers [e.g., @holcombe_implied_2017]. "Approximately correct" is defined as a serial position error of -1, 0, or 1. For an individual trial, then, left bias was this approximately correct value for the left stream minus approximately correct for the right stream.
+For each participant, this trial-by-trial left bias was correlated with the orientation of the current and four previous trials. This is plotted in Figure \@ref(corrE1f) . 
+
+(ref:corrE1) Correlation of left bias with this trial's orientation and with previous trial orientations.
+
+\@ref(corrE1f)
+
+```{r corrE1f, fig.cap='(ref:corrE1)'}
+require(knitr)
+knitr::include_graphics(file.path("..","E1","Results","Plots","autocorrE1.png"))
+```
+
+
+```{r readStreakBF, echo=FALSE, message=FALSE}
+ filePath<- file.path("..","E1","Results","streakBayesfactor.txt")
+ con = file(filePath, "r")
+ line = readLines(con, n = 1)
+```
+
+It is possible that the build-up of the bias is nonlinear in that the effect of a streak of trials with the same orientation is greater than the sum of the effect of the individual previous trials. We therefore compared the left bias after a streak of four trials with the same orientation to the left bias in all the trials that were not preceded by such a streak. However, there was no evidence for an effect, Bayesian t-test `r line`.
 
 # Discussion
 
