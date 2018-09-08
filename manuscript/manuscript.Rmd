@@ -187,7 +187,15 @@ latexReportBfp<- (apa_print(bfp)$statistic)[[1]]
 The latency and precision were similar in all four conditions, such that the Bayesian t-test supported the null hypothesis of no difference between left and right in both conditions (canonical: `r latexReportBflLR`, inverted: `r latexReportBflLRinvert`). The latency values are:
 canonical, left = `r round(mean(leftCanon$latency)*100)` ms, right = `r round(mean(rightCanon$latency)*100)` ms; inverted, left = `r round(mean(leftInverted$latency)*100)` ms, right = `r round(mean(rightInverted$latency)*100)` ms, and the precision values are: canonical, left = `r round(mean(leftCanon$precision)*100)` ms, right = `r round(mean(rightCanon$precision)*100)`; inverted, left = `r round(mean(leftInverted$precision)*100)`, right = `r round(mean(rightInverted$precision)*100)`. Thus, there was no support for the hypothesis of a difference between the left biases for the canonical and the inverted conditions, for latency (`r latexReportBfl`) or for precision (`r latexReportBfp`.
 
-ANALYZE THE EFFECT OF RESPONSE ORDER
+## No effect of response order
+One process that reading order can affect is memory retrieval. For readers of languages written left-to-right, readers 
+When people retrieve a list of items
+
+One way that reading order can exert its effect is by affecting the
+
+In studies of serial-order memory, readers of European lan- guages have been shown to associate sequences of items with positions from left to right. Items presented later in a list are associated with spatial positions further to the right, even when all stimuli are presented at the same position (Rinaldi et al., 2015; van Dijck, Abrahamse, Majerus, & Fias, 2013). These studies further suggest that when people retrieve a list of items in order, they scan a mental representation from left to right, which facilitates retrieval in the correct temporal order. So far, the effect of implied reading order has not been tested in this literature, but it has been suggested that it will have an effect (Abrahamse, van Dijck, Majerus, & Fias, 2014).
+
+In certain conditions, memory for serial order is spatialized by the human mind.
 
 ## No effect of previous trials
 
@@ -208,6 +216,7 @@ knitr::include_graphics(file.path("..","E1","Results","Plots","autocorrE1.png"))
  filePath<- file.path("..","E1","Results","streakBayesfactor.txt")
  con = file(filePath, "r")
  line = readLines(con, n = 1)
+ close(con)
 ```
 
 It is possible that the build-up of the bias is nonlinear in that the effect of a streak of trials with the same orientation is greater than the sum of the effect of the individual previous trials. We therefore compared the left bias after a streak of four trials with the same orientation to the left bias in all the trials that were not preceded by such a streak. However, there was no evidence for an effect, Bayesian t-test `r line`.
